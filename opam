@@ -1,0 +1,33 @@
+opam-version: "1.2"
+name:         "ike"
+homepage:     "https://github.com/isakmp/ike"
+dev-repo:     "https://github.com/isakmp/ike.git"
+bug-reports:  "https://github.com/isakmp/ike/issues"
+author:       ["a"]
+maintainer:   ["a"]
+license:      "BSD2"
+
+build: [
+  ["ocaml" "pkg/build.ml" "native=%{ocaml-native}%"
+                          "native-dynlink=%{ocaml-native-dynlink}%"]
+]
+build-test: [
+  ["ocaml" "pkg/build.ml" "native=%{ocaml-native}%"
+                          "native-dynlink=%{ocaml-native-dynlink}%"]
+  ["sh" "-exc" "if test -f ./feedback.native; then ./feedback.native; else ./feedback.byte; fi"]
+]
+
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "result"
+  "ppx_tools"
+  "cstruct" {>= "1.9.0"}
+  "sexplib"
+  "ppx_sexp_conv"
+  "nocrypto" {>= "0.5.3"}
+  "astring"
+  "alcotest" {test}
+]
+
+available: [ ocaml-version >= "4.02.3" ]
