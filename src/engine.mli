@@ -11,29 +11,25 @@ type failure = [
 
 val pp_failure : Format.formatter * failure -> unit
 
-val initiator : Config.t -> (state * Cstruct.t)
-val responder : Config.t -> state
+type sad_change
 
 type ret = [
-  | `Ok of [ `Ok of state | `Eof | `Notify of Packet.error ]
-           * [ `Response of Cstruct.t option ]
-           * [ `Data of Cstruct.t option ]
-           * [ `Retransmission of int option ]
-  | `Fail of failure * [ `Response of Cstruct.t ]
-]
+  | `Ok of state * sad_change list * Cstruct.t list
+  | `Fail of sad_change list
 
-(* retransmission timers handling *)
-val handle_retransmission : state -> ret
+val active_pads : Config.t -> peer_auth list
+
+val initiator : Config.t -> peer_auth -> state * (Ipaddr.t * int)
+val responder : Config.t -> state
 
 (* main handler for incoming bytes *)
-val handle_ike : state -> Cstruct.t -> ret
+val handle_ike : state -> addr -> Cstruct.t ->
+  [ ret | `InitialContact of state * peer_auth * out list ]
 
-(* do we need a destination (to discover whether to establish a new sa?)? *)
-val send_payload : state -> Cstruct.t -> (state * Cstruct.t) option
+val handle_initial_contact : state -> peer_auth ->
+  [ `Ok of state | `Fail of sad_change list ]
 
-(* informational data about SA *)
-type sa = {
-  version : ?? ;
-}
+val handle_tick : state -> ret
 
-val sa : state -> sa list
+val spi_matches : state -> Cstruct.t -> bool
+
