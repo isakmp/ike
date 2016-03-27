@@ -1,72 +1,60 @@
 
-type session = {
-  state : state ;
-  addr : Ipaddr.t * int ;
-}
+(* IKEv2 LWT interface
 
-type t = t list * sad list * control
+communication channels:
+  - kernel: pfkey(v2) - RFC2367 + KAME changes
+    startup: register AH + ESP
+    update SA, get requested on outgoing packet
+    policies also contained
+  - user: file descriptor / socket with config (mainly SP)
+  - network: UDP port 500 IKEv2 (* later also 4500 *)
+  - timer (for retransmission and keepalive) every 500 ms
 
-let tick s ts =
-  Lwt_list.fold_left_s (fun (acc, sads) t ->
-      match Ike.handle_tick t.state with
-      | `Ok (state, sads', outs) ->
-        Lwt_list.iter_s (Lwt_unix.sendto s t.addr outs) >|= fun () ->
-        ({t with state} :: acc, sads' @ sads)
-      | `Fail sads' ->
-        return (acc, sads' @ sads))
-    ([], [])
-    ts >>= fun (ts, sad_changes) ->
-  (ts, sad_changes)
+   all of them are combined into a Lwt_stream.t, which is consumed element-wise
+   by the main loop: evaluate Ike.handle, perform received actions (sending
+   pfkey and udp), goto 0.
+*)
 
-(* there might also be events from the control socket *)
-let read_or_tick s =
-  Lwt.join [
-    (Lwt_unix.recv_from s >|= fun (addr, cs) -> `Data (addr, cs)) ;
-    (Lwt_engine.on_timer tick_t >|= fun _ -> `Tick)
-  ]
+let rec pfkey_socket push socket () =
+  Lwt_unix.read socket >>= fun data ->
+  push (`Pfkey data) >>= fun () ->
+  pfkey_socket push socket ()
 
-let handle_next config s ts =
-  read_or_tick s >>= function
-  | `Tick -> tick s ts
-  | `Data (addr, cs) ->
-    let t, others =
-      match List.partition (spi_matches cs) ts with
-      | ([t], others) -> (t, others)
-      | ([], others) ->
-        let state = Ike.responder config addr in
-        ({ state ; addr }, others)
-      | _ -> assert false
-    in
-    match Ike.handle_ike t.state addr cs with
-    | `Ok (state, sad_changes, outs) ->
-      Lwt_list.iter_s (Lwt_unix.sendto s t.addr outs) >|= fun () ->
-      ({t with state} :: others, sad_changes)
-    | `InitialContact (state, auth, outs) ->
-      Lwt_list.iter_s (Lwt_unix.sendto s t.addr outs) >|= fun () ->
-      let ts, sad_changes =
-        List.fold_left (fun (acc, sads) t ->
-            match Ike.handle_initial_contact t.state auth with
-            | `Ok state -> ({ t with state } :: acc, sads)
-            | `Fail sads' -> (acc, sads' @ sads))
-          ([], [])
-          others
-      in
-      ({t with state} :: ts, sad_changes)
-    | `Fail sad_changes -> return (others, sad_changes)
+let rec user_socket push socket () =
+  Lwt_unix.read socket >>= fun data ->
+  push (`Config data) >>= fun () ->
+  user_socket push socket ()
 
-let sad_change control = function
-  | `Add _sad -> Lwt_io.write control "added sad"
-  | `Remove _sad -> Lwt_io.write control "removed sad"
+let rec network_socket push socket () =
+  Lwt_unix.recv_from socket >>= fun (data, addr) ->
+  push (`Data (data, addr)) >>= fun () ->
+  network_socket push socket ()
 
-let service config control port =
-  let rec loop s ts =
-    handle_next config s ts >>= fun (ts, sad_changes) ->
-    Lwt_list.iter_s (sad_change control) sad_changes >>= fun () ->
-    loop s ts
+let rec tick push () =
+  Lwt_unix.sleep 0.5 >>= fun () ->
+  push `Tick >>= fun () ->
+  tick push ()
+
+let service user port =
+  (* XXX: log reporters need to be installed here as well
+    (upon request (e.g. new IKE session))! *)
+  let stream, push = Lwt_stream.create () in
+  Lwt_unix.socket PF_KEY SOCK_RAW PF_KEY_V2 >>= fun pfkey ->
+  Lwt_unix.socket PF_INET SOCK_RAW user >>= fun user ->
+  Lwt_unix.socket PF_INET SOCK_DGRAM port >>= fun network ->
+  Lwt.async (pfkey_socket push pfkey) ;
+  Lwt.async (user_socket push user) ;
+  Lwt.async (network_socket push network) ;
+  Lwt.async (tick push) ;
+  let rec go t =
+    Lwt_stream.next stream >>= fun ev ->
+    match Ike.Dispatcher.handle ev with
+    | Ok (t', `Pfkey pfkey, `Data nout) ->
+      Lwt_list.iter_s (Lwt_unix.sendto network) nout >>= fun () ->
+      Lwt_unix.send pfkey pfkey >>= fun () ->
+      go t'
+    | Error str ->
+      Printf.printf "failed (with %s) while executing, goodbye" str ;
+      Lwt.return_unit
   in
-  let open_one pad =
-    let state, addr = Ike.initiator config pad in
-    { state ; addr }
-  in
-  Udp.bind port >>= fun s ->
-  loop s (List.map open_one (Ike.active_pads config))
+  go (Ike.Dispatcher.create ())
