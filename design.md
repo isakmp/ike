@@ -7,13 +7,17 @@ Control is the monadic control flow (no deps)
 
 C (the core definitions) contains high-level types (no deps)
 
-Packet contains enums from the standard (cstruct.ppx)
+Packet contains enums from the standard (uses cstruct.ppx)
 
-Decode contains stateless binary data to high-level type error (Packet, C, Control)
-Encode contains stateless high-level type to binary data (Packet, C)
+Decode contains stateless binary data to high-level type error (uses Packet, C, Control)
+Encode contains stateless high-level type to binary data (uses Packet, C)
 
-Crypto convenience functions for IKE crypto (nocrypto, C)
+Crypto convenience functions for IKE crypto (uses nocrypto, C)
 
-Config (programmatic) constructions for IKE configurations (C)
+Config (programmatic) constructions for IKE configurations (uses C)
 
-Engine the main processing pipeline (C, Decode, Encode, Crypto, Config)
+Engine the main processing pipeline (uses C, Decode, Encode, Crypto, Config) for a single IKE session
+
+Dispatcher contains a set of IKE sessions (which influence each other, e.g. when `InitialContact is received by one) and coordinates what needs to be done for an incoming event (uses Engine)
+
+Pfkey contains the pfkey protocol (RFC 2367 + SPD) (uses C)

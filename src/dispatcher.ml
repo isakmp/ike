@@ -1,5 +1,4 @@
 
-
 type t = {
   ts : state list ;
 }
@@ -38,8 +37,24 @@ let handle_data t data addr =
     ({t with state} :: ts, sad_changes)
   | `Fail sad_changes -> (others, sad_changes)
 
-let handle t = function
-  | `Pfkey data -> handle_pfkey t data
-  | `Config data > handle_config t data
-  | `Data (data, addr) -> handle_data t data addr
-  | `Timer -> handle_tick t
+let handle_pfkey t = function
+  | _ -> assert false
+
+let handle_config t = function
+  | _ -> assert false
+
+let handle t ev =
+  match
+    match ev with
+    | `Pfkey data -> Pfkey.decode data >>= handle_pfkey t
+    | `Config data > Config.decode data >>= handle_config t
+    | `Data (data, addr) -> handle_data t data addr
+    | `Timer -> handle_tick t
+  with
+  | Ok (t, pfkeys, outs) ->
+    (t, `Pfkey (List.map Pfkey.encode pfkeys), `Data outs)
+  | Error e -> Error e
+
+let create () =
+  let pfs = [ `Sadb_flush ; `Sadb_register `AH ; `Sadb_register `ESP ] in
+  ({ ts = [] }, List.map Pfkey.encode pfs)

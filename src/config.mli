@@ -5,3 +5,10 @@ type t = {
   supported_versions : version list ;
   enc : cipher list
 }
+
+type action =
+  | `SPDadd
+  | `SPDremove
+  | ...
+
+val decode : Cstruct.t -> action error
