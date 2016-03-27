@@ -3,12 +3,10 @@
 
 type t = {
   supported_versions : version list ;
-  enc : cipher list
+  enc : cipher list ;
+  policies : ?? ;
+  selectors : ?? ;
+  peers : ?? ;
 }
 
-type action =
-  | `SPDadd
-  | `SPDremove
-  | ...
-
-val decode : Cstruct.t -> action error
+val parse : data -> t

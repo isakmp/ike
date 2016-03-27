@@ -24,7 +24,7 @@ let rec pfkey_socket push socket () =
 
 let rec user_socket push socket () =
   Lwt_unix.read socket >>= fun data ->
-  push (`Config data) >>= fun () ->
+  push (`Control data) >>= fun () ->
   user_socket push socket ()
 
 let rec network_socket push socket () =
@@ -37,8 +37,12 @@ let rec tick push () =
   Lwt_unix.sleep 0.5 >>= fun () ->
   tick push ()
 
-let service user port =
+let service user port config =
   Lwt.async_exception_hook :=
+    (* error handling of a failed network send:
+        - inform IKE (find which t is responsible and do shutdown)
+        - log error (done ;)
+    *)
     (fun exn ->
        Logs_lwt.err (fun p -> p "async exception %s" (Printexc.to_string exn))) ;
   let stream, push = Lwt_stream.create () in
@@ -61,7 +65,7 @@ let service user port =
         (fun p -> p "failed (with %s) while executing, goodbye"
             (Printexc.to_string str))
   in
-  let t, pfkeys = Ike.Dispatcher.create () in
+  let t, pfkeys = Ike.Dispatcher.create ~config () in
   Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () ->
   go t
 
@@ -92,6 +96,7 @@ let lwt_reporter () =
 (* handle log command-line arguments *)
 let user = ref 1234
 let port = ref 500
+let config = ref ""
 let rest = ref []
 
 let usage = "usage " ^ Sys.argv.(0)
@@ -99,6 +104,7 @@ let usage = "usage " ^ Sys.argv.(0)
 let arglist = [
   ("-u", Arg.Int (fun d -> user := (int_of_string d)), "port for user config (defaults to 1234)") ;
   ("-d", Arg.Int (fun d -> port := (int_of_string d)), "port for IKE daemon (defaults to 500)") ;
+  ("-c", Arg.String (fun d -> config := d), "IKE configuration") ;
 ]
 
 let _ =
@@ -107,6 +113,6 @@ let _ =
     Fmt_tty.setup_std_outputs ();
     Logs.set_level @@ Some Logs.Debug;
     Logs.set_reporter @@ lwt_reporter ();
-    Lwt_main.run (service !user !port)
+    Lwt_main.run (service !user !port !config)
   with
   | Sys_error s -> print_endline s

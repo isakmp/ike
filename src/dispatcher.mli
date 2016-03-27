@@ -5,7 +5,7 @@ type t
    event to interested IKE sessions (Engine.t).  It is the main
    entry point for a side-effecting speaker. *)
 val handle : t ->
-  [ `Pfkey of Cstruct.t | `Config of Cstruct.t | `Data of (Cstruct.t, addr) | `Tick ] ->
+  [ `Pfkey of Cstruct.t | `Control of Cstruct.t | `Data of (Cstruct.t, addr) | `Tick ] ->
   (t * [ `Pfkey of Cstruct.t list ] * [ `Data of (Cstruct.t, addr) list ],
    string ) Result.result
 

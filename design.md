@@ -3,7 +3,7 @@ IKE
 
 Utils contains general useful utilities (no deps, everybody can use this)
 
-Control is the monadic control flow (no deps)
+Monad is the monadic control flow (no deps, used in parser and protocol handling)
 
 C (the core definitions) contains high-level types (no deps)
 
@@ -14,7 +14,9 @@ Encode contains stateless high-level type to binary data (uses Packet, C)
 
 Crypto convenience functions for IKE crypto (uses nocrypto, C)
 
-Config (programmatic) constructions for IKE configurations (uses C)
+Config constructions for IKE configurations (uses C)
+
+Control is the control socket (such as shutdown, more?) (uses C)
 
 Engine the main processing pipeline (uses C, Decode, Encode, Crypto, Config) for a single IKE session
 

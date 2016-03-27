@@ -1,6 +1,7 @@
 
 type t = {
   ts : state list ;
+  config : Config.t ;
 }
 
 let handle_tick t =
@@ -47,7 +48,7 @@ let handle t ev =
   match
     match ev with
     | `Pfkey data -> Pfkey.decode data >>= handle_pfkey t
-    | `Config data > Config.decode data >>= handle_config t
+    | `Control data > Control.decode data >>= handle_control t
     | `Data (data, addr) -> handle_data t data addr
     | `Timer -> handle_tick t
   with
@@ -55,6 +56,7 @@ let handle t ev =
     (t, `Pfkey (List.map Pfkey.encode pfkeys), `Data outs)
   | Error e -> Error e
 
-let create () =
+let create config () =
+  let config = Config.parse config in
   let pfs = [ `Sadb_flush ; `Sadb_register `AH ; `Sadb_register `ESP ] in
-  ({ ts = [] }, List.map Pfkey.encode pfs)
+  ({ ts = [] ; config }, List.map Pfkey.encode pfs)
