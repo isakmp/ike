@@ -1,7 +1,7 @@
+open Return
 
 (* the main engine *)
-
-type state
+type t
 
 (* failures, to be shown to us *)
 type failure = [
@@ -13,23 +13,23 @@ val pp_failure : Format.formatter * failure -> unit
 
 type sad_change
 
-type ret = [
-  | `Ok of state * sad_change list * Cstruct.t list
-  | `Fail of sad_change list
+type ret =
+  (t * sad_change list * Cstruct.t list,
+   sad_change list) return
 
 val active_pads : Config.t -> peer_auth list
 
-val initiator : Config.t -> peer_auth -> state * (Ipaddr.t * int)
-val responder : Config.t -> state
+val initiator : Config.t -> peer_auth -> t * (Ipaddr.t * int)
+val responder : Config.t -> t
 
 (* main handler for incoming bytes *)
-val handle_ike : state -> addr -> Cstruct.t ->
-  [ ret | `InitialContact of state * peer_auth * out list ]
+val handle_ike : t -> addr -> Cstruct.t ->
+  [ ret | `InitialContact of t * peer_auth * out list ]
 
-val handle_initial_contact : state -> peer_auth ->
-  [ `Ok of state | `Fail of sad_change list ]
+val handle_initial_contact : t -> peer_auth ->
+  [ `Ok of t | `Fail of sad_change list ]
 
-val handle_tick : state -> ret
+val handle_tick : t -> ret
 
-val spi_matches : state -> Cstruct.t -> bool
+val spi_matches : t -> Cstruct.t -> bool
 

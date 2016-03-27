@@ -40,15 +40,18 @@ let rec tick push () =
 let service user port config =
   Lwt.async_exception_hook :=
     (* error handling of a failed network send:
-        - inform IKE (find which t is responsible and do shutdown)
-        - log error (done ;)
-    *)
+        - inform IKE (find which t is responsible and do a proper shutdown)
+        --> maybe emit a `NetworkFailure event to handle?
+        - what should happen when pfkey socket fails?
+        - what if control socket fails?
+        - log error (done ;) *)
     (fun exn ->
        Logs_lwt.err (fun p -> p "async exception %s" (Printexc.to_string exn))) ;
   let stream, push = Lwt_stream.create () in
   Lwt_unix.socket PF_KEY SOCK_RAW PF_KEY_V2 >>= fun pfkey ->
   Lwt_unix.socket PF_INET SOCK_RAW user >>= fun user ->
   Lwt_unix.socket PF_INET SOCK_DGRAM port >>= fun network ->
+  (* need to bind / connect *)
   Lwt.async (pfkey_socket push pfkey) ;
   Lwt.async (user_socket push user) ;
   Lwt.async (network_socket push network) ;

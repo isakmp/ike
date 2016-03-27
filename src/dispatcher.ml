@@ -2,14 +2,16 @@
 type t = {
   ts : state list ;
   config : Config.t ;
+  supported_auth : ?? ; (* from the kernel *)
+  supported_enc : ?? ;
 }
 
 let handle_tick t =
   List.fold_left (fun (acc, sads) t ->
       match Ike.handle_tick t with
-      | `Ok (state, sads', outs) ->
+      | Ok (state, sads', outs) ->
         ({t with state} :: acc, sads' @ sads)
-      | `Fail sads' ->
+      | Error sads' ->
         (acc, sads' @ sads))
     ([], [])
     ts
@@ -24,7 +26,7 @@ let handle_data t data addr =
     | _ -> assert false
   in
   match Ike.handle_ike t.state addr cs with
-  | `Ok (state, sad_changes, outs) ->
+  | Ok (state, sad_changes, outs) ->
     ({t with state} :: others, sad_changes, outs)
   | `InitialContact (state, auth, outs) ->
     let ts, sad_changes =
@@ -36,7 +38,7 @@ let handle_data t data addr =
         others
     in
     ({t with state} :: ts, sad_changes)
-  | `Fail sad_changes -> (others, sad_changes)
+  | Error sad_changes -> (others, sad_changes)
 
 let handle_pfkey t = function
   | _ -> assert false
