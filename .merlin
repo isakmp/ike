@@ -1,0 +1,16 @@
+S common
+S src
+S pfkey
+S lwt
+
+B _build/**
+
+PKG cstruct
+PKG lwt
+PKG result
+PKG sexplib
+PKG nocrypto
+PKG astring
+PKG logs
+PKG ipaddr
+PKG alcotest
