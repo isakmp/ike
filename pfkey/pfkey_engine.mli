@@ -4,12 +4,14 @@ type message = [
   | `Register of Pfkey_wire.satype
 ]
 
-type t
+type state
 
 type error
 
 val pp_error : Format.formatter -> error -> unit
 
-val handle : t -> Cstruct.t -> (t * Cstruct.t, error) result
+val create : unit -> state
 
-val send : t -> message -> (t * Cstruct.t)
+val handle : state -> Cstruct.t -> (state * Cstruct.t, error) result
+
+val send : state -> message -> (state * Cstruct.t)
