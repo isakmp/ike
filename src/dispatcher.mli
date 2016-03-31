@@ -5,9 +5,9 @@ type t
    event to interested IKE sessions (Engine.t).  It is the main
    entry point for a side-effecting speaker. *)
 val handle : t ->
-  [ `Pfkey of Cstruct.t | `Control of Cstruct.t | `Data of (Cstruct.t, addr) | `Tick ] ->
-  (t * [ `Pfkey of Cstruct.t list ] * [ `Data of (Cstruct.t, addr) list ],
-   string ) Result.result
+  [ `Pfkey of Cstruct.t | `Control of Cstruct.t | `Data of (Cstruct.t * (Unix.inet_addr * int)) | `Tick ] ->
+  (t * [ `Pfkey of Cstruct.t list ] * [ `Data of (Cstruct.t * (Unix.inet_addr * int)) list ],
+   C.error ) Result.result
 
 (* creation of a `t`: it will start with an empty list of Engine.t, and emit
    some messages to be send to the pfkey socket (FLUSH, REGISTER AH, REGISTER

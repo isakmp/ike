@@ -1,17 +1,13 @@
 open Result
 
-type message = [
+type pfkey_message = [
   | `Register of Pfkey_wire.satype
 ]
 
 type state
 
-type error
-
-val pp_error : Format.formatter -> error -> unit
-
 val create : unit -> state
 
-val handle : state -> Cstruct.t -> (state * Cstruct.t, error) result
+val handle : state -> Cstruct.t -> (state * Cstruct.t, C.error) result
 
-val send : state -> message -> (state * Cstruct.t)
+val send : state -> pfkey_message -> (state * Cstruct.t)

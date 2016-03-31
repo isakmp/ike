@@ -7,10 +7,13 @@ B _build/**
 
 PKG cstruct
 PKG lwt
+PKG lwt.unix
 PKG result
 PKG sexplib
 PKG nocrypto
 PKG astring
 PKG logs
+PKG logs.lwt
 PKG ipaddr
 PKG alcotest
+PKG fmt

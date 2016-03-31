@@ -12,9 +12,10 @@ BUILDDIR=${BUILDDIR:="_build"}
 action ()
 {
     case $1 in
-        default) action pfkey ;;
+        default) action lwt ;;
+        lwt) action pfkey ; $OCAMLBUILD lwt/ike_lwt.native ;;
         pfkey) $OCAMLBUILD ike.cmx ike.cmxa ;;
-        test) action lib ; $OCAMLBUILD rfctests.native ;;
+        test) action pfkey ; $OCAMLBUILD rfctests.native ;;
         doc) shift
              $OCAMLBUILD -no-links $OCAMLDOCFLAGS doc/api.docdir/index.html
              cp doc/style.css $BUILDDIR/$DOCDIRFILE/style.css ;;

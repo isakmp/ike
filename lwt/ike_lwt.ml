@@ -16,12 +16,13 @@ communication channels:
 *)
 
 open Lwt.Infix
+open Result
 
-let rec pfkey_socket push socket () =
-  Lwt_unix.read socket >>= fun data ->
-  push (`Pfkey data) >>= fun () ->
-  pfkey_socket push socket ()
-
+let pfkey_reader socket () =
+  let buf = Bytes.create 8192 in
+  Lwt_unix.read socket buf 0 8192 >|= fun n ->
+  Some (`Pfkey (Cstruct.of_string (Bytes.sub buf 0 n)))
+(*
 let rec user_socket push socket () =
   Lwt_unix.read socket >>= fun data ->
   push (`Control data) >>= fun () ->
@@ -36,8 +37,8 @@ let rec tick push () =
   push `Tick >>= fun () ->
   Lwt_unix.sleep 0.5 >>= fun () ->
   tick push ()
-
-let service user port config =
+*)
+let service _user _port pfkey_port _config =
   Lwt.async_exception_hook :=
     (* error handling of a failed network send:
         - inform IKE (find which t is responsible and do a proper shutdown)
@@ -45,31 +46,32 @@ let service user port config =
         - what should happen when pfkey socket fails?
         - what if control socket fails?
         - log error (done ;) *)
-    (fun exn ->
-       Logs_lwt.err (fun p -> p "async exception %s" (Printexc.to_string exn))) ;
-  let stream, push = Lwt_stream.create () in
-  Lwt_unix.socket PF_KEY SOCK_RAW PF_KEY_V2 >>= fun pfkey ->
-  Lwt_unix.socket PF_INET SOCK_RAW user >>= fun user ->
-  Lwt_unix.socket PF_INET SOCK_DGRAM port >>= fun network ->
+    (fun exn -> Logs.err (fun p -> p "async exception %s" (Printexc.to_string exn))) ;
+  let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
+  Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", pfkey_port))) >>= fun () ->
+  let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_fd) in
+
+
+  (* Lwt_unix.(socket PF_INET SOCK_STREAM user) >>= fun user ->
+     Lwt_unix.(socket PF_INET SOCK_DGRAM port) >>= fun network -> *)
   (* need to bind / connect *)
-  Lwt.async (pfkey_socket push pfkey) ;
+(*  Lwt.async (pfkey_socket push pfkey) ;
   Lwt.async (user_socket push user) ;
   Lwt.async (network_socket push network) ;
-  Lwt.async (tick push) ;
+  Lwt.async (tick push) ; *)
   let rec go t =
-    Lwt_stream.next stream >>= fun ev ->
-    match Ike.Dispatcher.handle ev with
-    | Ok (t', `Pfkey pfkeys, `Data nouts) ->
-      Lwt_list.iter_s (Lwt_unix.sendto network) nouts >>= fun () ->
-      Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () ->
+    Lwt_stream.next pfkey_stream >>= fun ev ->
+    match Ike.Dispatcher.handle t ev with
+    | Ok (t', `Pfkey _pfkeys, `Data _nouts) ->
+(*      Lwt_list.iter_s (Lwt_unix.sendto network) nouts >>= fun () ->
+        Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () -> *)
       go t'
-    | Error str ->
+    | Error (Ike.C.Failed str) ->
       Logs_lwt.err
-        (fun p -> p "failed (with %s) while executing, goodbye"
-            (Printexc.to_string str))
+        (fun p -> p "failed (with %s) while executing, goodbye" str)
   in
-  let t, pfkeys = Ike.Dispatcher.create ~config () in
-  Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () ->
+  let t, _pfkeys = Ike.Dispatcher.create (*config*) () in
+  (*  Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () -> *)
   go t
 
 (* copied from logs library test/test_lwt.ml *)
@@ -97,7 +99,8 @@ let lwt_reporter () =
   { Logs.report = report }
 
 (* handle log command-line arguments *)
-let user = ref 1234
+let pfkey = ref 1234
+let user = ref 23
 let port = ref 500
 let config = ref ""
 let rest = ref []
@@ -105,8 +108,9 @@ let rest = ref []
 let usage = "usage " ^ Sys.argv.(0)
 
 let arglist = [
-  ("-u", Arg.Int (fun d -> user := (int_of_string d)), "port for user config (defaults to 1234)") ;
-  ("-d", Arg.Int (fun d -> port := (int_of_string d)), "port for IKE daemon (defaults to 500)") ;
+  ("-u", Arg.Int (fun d -> user := d), "port for user config (defaults to 23)") ;
+  ("-p", Arg.Int (fun d -> pfkey := d), "port for pfkey (defaults to 1234)") ;
+  ("-d", Arg.Int (fun d -> port := d), "port for IKE daemon (defaults to 500)") ;
   ("-c", Arg.String (fun d -> config := d), "IKE configuration") ;
 ]
 
@@ -116,6 +120,6 @@ let _ =
     Fmt_tty.setup_std_outputs ();
     Logs.set_level @@ Some Logs.Debug;
     Logs.set_reporter @@ lwt_reporter ();
-    Lwt_main.run (service !user !port !config)
+    Lwt_main.run (service !user !port !pfkey !config)
   with
   | Sys_error s -> print_endline s

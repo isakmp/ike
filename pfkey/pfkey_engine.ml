@@ -1,15 +1,8 @@
+open C
 
-type message = [
+type pfkey_message = [
   | `Register of Pfkey_wire.satype
 ]
-
-type spd = { (* our policy type -- maybe directly in ike? *)
-  idx : int
-}
-
-type sa = { (* our sa type -- maybe directly in ike? *)
-  spi : int32 ;
-}
 
 type state = {
   spds : spd list ;
@@ -22,15 +15,6 @@ let create () = {
   sas = [] ;
   logger = Logs.Src.create "pfkey engine"
 }
-
-type error =
-  | Failed of string
-
-let pp_error ppf = function
-  | Failed s -> Format.fprintf ppf "failed: %s" s
-
-include Monad.Or_error_make (struct type err = error end)
-open Result
 
 let handle_data state (msg_type, errno, sa_type, seq, pid) payload =
   let open Pfkey_wire in

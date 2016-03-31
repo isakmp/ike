@@ -1,11 +1,16 @@
+open C
+
+type state = int
 
 type t = {
   ts : state list ;
-  config : Config.t ;
+  pfkey : Pfkey_engine.state ;
+(*  config : Config.t ;
   supported_auth : ?? ; (* from the kernel *)
-  supported_enc : ?? ;
+    supported_enc : ?? ; *)
 }
 
+(*
 let handle_tick t =
   List.fold_left (fun (acc, sads) t ->
       match Ike.handle_tick t with
@@ -39,26 +44,24 @@ let handle_data t data addr =
     in
     ({t with state} :: ts, sad_changes)
   | Error sad_changes -> (others, sad_changes)
+*)
 
-let handle_pfkey t = function
+(*
+let handle_control t = function
   | _ -> assert false
-
-let handle_config t = function
-  | _ -> assert false
+*)
 
 let handle t ev =
-  match
-    match ev with
-    | `Pfkey data -> Pfkey.decode data >>= handle_pfkey t
-    | `Control data > Control.decode data >>= handle_control t
-    | `Data (data, addr) -> handle_data t data addr
-    | `Timer -> handle_tick t
-  with
-  | Ok (t, pfkeys, outs) ->
-    (t, `Pfkey (List.map Pfkey.encode pfkeys), `Data outs)
-  | Error e -> Error e
+  match ev with
+  | `Pfkey data -> Pfkey_engine.handle t.pfkey data >|= fun (pfkey, pfkeys) ->
+    ({ t with pfkey }, `Pfkey [pfkeys], `Data [])
+  | _ -> assert false
+(* | `Control data > Control.decode data >>= handle_control t
+   | `Data (data, addr) -> handle_data t data addr
+   | `Timer -> handle_tick t *)
 
-let create config () =
-  let config = Config.parse config in
-  let pfs = [ `Sadb_flush ; `Sadb_register `AH ; `Sadb_register `ESP ] in
-  ({ ts = [] ; config }, List.map Pfkey.encode pfs)
+let create () =
+(*  let config = Config.parse config in
+    let pfs = [ `Sadb_flush ; `Sadb_register `AH ; `Sadb_register `ESP ] in *)
+  let pfkey = Pfkey_engine.create () in
+  ({ ts = [] ; pfkey }, []) (*List.map Pfkey.encode pfs)*)
