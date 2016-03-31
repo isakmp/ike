@@ -14,18 +14,18 @@ type message_type =
   | EXPIRE       [@id 8]
   | FLUSH        [@id 9]
   | DUMP         [@id 10]
-  | X_PROMISC    [@id 11]
-  | X_PCHANGE    [@id 12]
-  | X_SPDUPDATE  [@id 13]
-  | X_SPDADD     [@id 14]
-  | X_SPDDELETE  [@id 15]	(* by policy index *)
-  | X_SPDGET     [@id 16]
-  | X_SPDACQUIRE [@id 17]
-  | X_SPDDUMP    [@id 18]
-  | X_SPDFLUSH   [@id 19]
-  | X_SPDSETIDX  [@id 20]
-  | X_SPDEXPIRE  [@id 21]
-  | X_SPDDELETE2 [@id 22]	(* by policy id *)
+  | PROMISC      [@id 11]
+  | PCHANGE      [@id 12]
+  | SPDUPDATE    [@id 13]
+  | SPDADD       [@id 14]
+  | SPDDELETE    [@id 15] (* by policy index *)
+  | SPDGET       [@id 16]
+  | SPDACQUIRE   [@id 17]
+  | SPDDUMP      [@id 18]
+  | SPDFLUSH     [@id 19]
+  | SPDSETIDX    [@id 20]
+  | SPDEXPIRE    [@id 21]
+  | SPDDELETE2   [@id 22] (* by policy id *)
   [@@uint8_t] [@@sexp]]
 
 [%%cstruct
@@ -248,33 +248,33 @@ type nat_t_frag = {
 
 [%%cenum
 type extension_type =
-  | EXT_RESERVED         [@id 0]
-  | SA                   [@id 1]
-  | LIFETIME_CURRENT     [@id 2]
-  | LIFETIME_HARD        [@id 3]
-  | LIFETIME_SOFT        [@id 4]
-  | ADDRESS_SRC          [@id 5]
-  | ADDRESS_DST          [@id 6]
-  | ADDRESS_PROXY        [@id 7]
-  | KEY_AUTH             [@id 8]
-  | KEY_ENCRYPT          [@id 9]
-  | IDENTITY_SRC         [@id 10]
-  | IDENTITY_DST         [@id 11]
-  | SENSITIVITY          [@id 12]
-  | PROPOSAL             [@id 13]
-  | SUPPORTED_AUTH       [@id 14]
-  | SUPPORTED_ENCRYPT    [@id 15]
-  | SPIRANGE             [@id 16]
-  | X_KMPRIVATE          [@id 17]
-  | X_POLICY             [@id 18]
-  | X_SA2                [@id 19]
-  | X_NAT_T_TYPE         [@id 20]
-  | X_NAT_T_SPORT        [@id 21]
-  | X_NAT_T_DPORT        [@id 22]
-(*  | X_NAT_T_OA           [@id 23] Deprecated. *)
-  | X_NAT_T_OAI          [@id 23] (* Peer's NAT_OA for src of SA. *)
-  | X_NAT_T_OAR          [@id 24] (* Peer's NAT_OA for dst of SA. *)
-  | X_NAT_T_FRAG         [@id 25] (* Manual MTU override. *)
+  | EXT_RESERVED       [@id 0]
+  | SA                 [@id 1]
+  | LIFETIME_CURRENT   [@id 2]
+  | LIFETIME_HARD      [@id 3]
+  | LIFETIME_SOFT      [@id 4]
+  | ADDRESS_SRC        [@id 5]
+  | ADDRESS_DST        [@id 6]
+  | ADDRESS_PROXY      [@id 7]
+  | KEY_AUTH           [@id 8]
+  | KEY_ENCRYPT        [@id 9]
+  | IDENTITY_SRC       [@id 10]
+  | IDENTITY_DST       [@id 11]
+  | SENSITIVITY        [@id 12]
+  | PROPOSAL           [@id 13]
+  | SUPPORTED_AUTH     [@id 14]
+  | SUPPORTED_ENCRYPT  [@id 15]
+  | SPIRANGE           [@id 16]
+  | KMPRIVATE          [@id 17]
+  | POLICY             [@id 18]
+  | SA2                [@id 19]
+  | NAT_T_TYPE         [@id 20]
+  | NAT_T_SPORT        [@id 21]
+  | NAT_T_DPORT        [@id 22]
+(*  | NAT_T_OA           [@id 23] Deprecated. *)
+  | NAT_T_OAI          [@id 23] (* Peer's NAT_OA for src of SA. *)
+  | NAT_T_OAR          [@id 24] (* Peer's NAT_OA for dst of SA. *)
+  | NAT_T_FRAG         [@id 25] (* Manual MTU override. *)
   [@@uint16_t] [@@sexp]]
 
 [%%cenum
@@ -286,9 +286,9 @@ type satype =
   | OSPFV2              [@id 6]
   | RIPV2               [@id 7]
   | MIP                 [@id 8]
-  | X_IPCOMP            [@id 9]
-  | X_POLICY            [@id 10] (* obsolete, do not reuse *)
-  | X_TCPSIGNATURE      [@id 11]
+  | IPCOMP              [@id 9]
+  | OBSOLETE_POLICY     [@id 10] (* obsolete, do not reuse *)
+  | TCPSIGNATURE        [@id 11]
   [@@uint8_t] [@@sexp]]
 
 [%%cenum
@@ -316,39 +316,39 @@ type saflags =
  *)
 [%%cenum
 type aalg =
-  | AALG_NONE              [@id 0]
-  | AALG_MD5HMAC           [@id 2]
-  | AALG_SHA1HMAC          [@id 3]
-  | X_AALG_SHA2_256        [@id 5]
-  | X_AALG_SHA2_384        [@id 6]
-  | X_AALG_SHA2_512        [@id 7]
-  | X_AALG_RIPEMD160HMAC   [@id 8]
-  | X_AALG_AES_XCBC_MAC    [@id 9] (* RFC3566 *)
-  | X_AALG_AES128GMAC      [@id 11] (* RFC4543 + Errata1821 *)
-  | X_AALG_AES192GMAC      [@id 12]
-  | X_AALG_AES256GMAC      [@id 13]
-  | X_AALG_MD5             [@id 249] (* Keyed MD5 *)
-  | X_AALG_SHA             [@id 250] (* Keyed SHA *)
-  | X_AALG_NULL            [@id 251] (* null authentication *)
-  | X_AALG_TCP_MD5         [@id 252] (* Keyed TCP-MD5 (RFC2385) *)
+  | AALG_NONE            [@id 0]
+  | AALG_MD5HMAC         [@id 2]
+  | AALG_SHA1HMAC        [@id 3]
+  | AALG_SHA2_256        [@id 5]
+  | AALG_SHA2_384        [@id 6]
+  | AALG_SHA2_512        [@id 7]
+  | AALG_RIPEMD160HMAC   [@id 8]
+  | AALG_AES_XCBC_MAC    [@id 9] (* RFC3566 *)
+  | AALG_AES128GMAC      [@id 11] (* RFC4543 + Errata1821 *)
+  | AALG_AES192GMAC      [@id 12]
+  | AALG_AES256GMAC      [@id 13]
+  | AALG_MD5             [@id 249] (* Keyed MD5 *)
+  | AALG_SHA             [@id 250] (* Keyed SHA *)
+  | AALG_NULL            [@id 251] (* null authentication *)
+  | AALG_TCP_MD5         [@id 252] (* Keyed TCP-MD5 (RFC2385) *)
   [@@uint8_t] [@@sexp]]
 
 [%%cenum
 type ealg =
-  | SADB_EALG_NONE              [@id 0]
-  | SADB_EALG_DESCBC            [@id 2]
-  | SADB_EALG_3DESCBC           [@id 3]
-  | SADB_X_EALG_CAST128CBC      [@id 6]
-  | SADB_X_EALG_BLOWFISHCBC     [@id 7]
-  | SADB_EALG_NULL              [@id 11]
-  (*  | SADB_X_EALG_RIJNDAELCBC     [@id 12] *)
-  | SADB_X_EALG_AES             [@id 12]
-  | SADB_X_EALG_AESCTR          [@id 13]
-  | SADB_X_EALG_AESGCM8         [@id 18] (* RFC4106 *)
-  | SADB_X_EALG_AESGCM12        [@id 19]
-  | SADB_X_EALG_AESGCM16        [@id 20]
-  | SADB_X_EALG_CAMELLIACBC     [@id 22]
-  | SADB_X_EALG_AESGMAC         [@id 23] (* RFC4543 + Errata1821 *)
+  | EALG_NONE            [@id 0]
+  | EALG_DESCBC          [@id 2]
+  | EALG_3DESCBC         [@id 3]
+  | EALG_CAST128CBC      [@id 6]
+  | EALG_BLOWFISHCBC     [@id 7]
+  | EALG_NULL            [@id 11]
+  (*  | EALG_RIJNDAELCBC     [@id 12] *)
+  | EALG_AES             [@id 12]
+  | EALG_AESCTR          [@id 13]
+  | EALG_AESGCM8         [@id 18] (* RFC4106 *)
+  | EALG_AESGCM12        [@id 19]
+  | EALG_AESGCM16        [@id 20]
+  | EALG_CAMELLIACBC     [@id 22]
+  | EALG_AESGMAC         [@id 23] (* RFC4543 + Errata1821 *)
   [@@uint8_t] [@@sexp]]
 
 (* private allocations - based on RFC2407/IANA assignment *)
@@ -366,7 +366,7 @@ type ident_type =
   | IDENTTYPE_PREFIX     [@id 1]
   | IDENTTYPE_FQDN       [@id 2]
   | IDENTTYPE_USERFQDN   [@id 3]
-  | X_IDENTTYPE_ADDR     [@id 4]
+  | IDENTTYPE_ADDR       [@id 4]
   [@@uint8_t] [@@sexp]]
 
 (* `flags' in sadb_sa structure holds followings *)
