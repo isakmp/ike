@@ -83,8 +83,8 @@ let lwt_reporter () =
   in
   let app, app_flush = buf_fmt ~like:Fmt.stdout in
   let dst, dst_flush = buf_fmt ~like:Fmt.stderr in
-  let reporter = Logs_fmt.reporter ~app ~dst () in
   let report src level ~over k msgf =
+    let reporter = Logs_fmt.reporter ~prefix:(Some (Logs.Src.name src ^ " ")) ~app ~dst () in
     let k () =
       let write () = match level with
       | Logs.App -> Lwt_io.write Lwt_io.stdout (app_flush ())
