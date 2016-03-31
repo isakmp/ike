@@ -8,7 +8,6 @@ true : warn(+A-4-6-7-9-40-42-44-48)
 <pfkey/pfkey_wire.{ml,mli}>: package(cstruct), package(cstruct.ppx), package(sexplib), for-pack(Ike)
 <pfkey/pfkey_coding.{ml,mli}>: package(cstruct), package(result), package(sexplib), package(ppx_sexp_conv), for-pack(Ike)
 <pfkey/pfkey_engine.{ml,mli}>: package(cstruct), package(result), package(logs), for-pack(Ike)
-<pfkey/pfkey.mli>: for-pack(Ike)
 
 <common/c.{ml,mli}>: package(result), for-pack(Ike)
 <common/monad.{ml,mli}>: package(result), for-pack(Ike)
