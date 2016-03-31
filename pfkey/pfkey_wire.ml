@@ -29,7 +29,7 @@ type message_type =
   [@@uint8_t] [@@sexp]]
 
 [%%cstruct
-type sadb_message = {
+type message = {
   version : uint8_t ;
   msg_type : uint8_t ;
   errno : uint8_t ;
