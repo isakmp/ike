@@ -13,7 +13,7 @@ action ()
 {
     case $1 in
         default) action pfkey ;;
-        pfkey) $OCAMLBUILD pfkey.cmx pfkey.cmxa ;;
+        pfkey) $OCAMLBUILD ike.cmx ike.cmxa ;;
         test) action lib ; $OCAMLBUILD rfctests.native ;;
         doc) shift
              $OCAMLBUILD -no-links $OCAMLDOCFLAGS doc/api.docdir/index.html

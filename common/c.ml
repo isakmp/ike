@@ -5,8 +5,8 @@ type version =
   | IKE_V2
 
 type message =
-  | Authentication of authentication
-  | Certificate of certificate list
-  | CertificateRequest of ??
+  | Authentication(* of authentication *)
+  | Certificate (* of certificate list *)
+  | CertificateRequest (* of ??*)
   | Configuration
   | Delete

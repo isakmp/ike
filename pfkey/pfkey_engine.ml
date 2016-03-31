@@ -23,6 +23,7 @@ let pp_error ppf = function
   | Failed s -> Format.fprintf ppf "failed: %s" s
 
 let handle _t _buf =
+  let _err = Failed "bar" in
   assert false
 
 let send _t _msg =
