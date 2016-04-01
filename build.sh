@@ -12,14 +12,15 @@ BUILDDIR=${BUILDDIR:="_build"}
 action ()
 {
     case $1 in
-        default) action lwt ;;
+        default) action lwt ; action heler ;;
+        helper) cc -Wall -Werror -O3 -o helper/pf_to_tcp helper/pf_to_tcp.c ;;
         lwt) action pfkey ; $OCAMLBUILD lwt/ike_lwt.native ;;
         pfkey) $OCAMLBUILD ike.cmx ike.cmxa ;;
         test) action pfkey ; $OCAMLBUILD rfctests.native ;;
         doc) shift
              $OCAMLBUILD -no-links $OCAMLDOCFLAGS doc/api.docdir/index.html
              cp doc/style.css $BUILDDIR/$DOCDIRFILE/style.css ;;
-        clean) $OCAMLBUILD -clean ; rm -rf _tests ;;
+        clean) $OCAMLBUILD -clean ; rm -rf _tests ; rm -f helper/pf_to_tcp ;;
         *) $OCAMLBUILD $* ;;
     esac
 }
