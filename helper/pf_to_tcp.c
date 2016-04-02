@@ -11,7 +11,13 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 
+#ifdef __linux__
+#include <linux/pfkeyv2.h>
+#endif
+
+#ifdef __FreeBSD__
 #include <net/pfkeyv2.h>
+#endif
 
 #include <sys/select.h>
 

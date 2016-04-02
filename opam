@@ -7,6 +7,8 @@ author:       ["a"]
 maintainer:   ["a"]
 license:      "BSD2"
 
+build: [ "sh" "-exc" "build.sh" ]
+
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
