@@ -1,6 +1,8 @@
 IKEv2
 =====
 
+[![Build Status](https://travis-ci.org/isakmp/ike.svg?branch=master)](https://travis-ci.org/isakmp/ike)
+
 ![Screenshot](http://berlin.ccc.de/~hannes/ike0.png)
 
 The Internet Key Exchange is the protocol to setup security associations.  Those
