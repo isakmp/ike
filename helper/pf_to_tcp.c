@@ -22,12 +22,10 @@
 #include <sys/select.h>
 
 #define bsize 8192
+char buffer[bsize];
+ssize_t n;
 
 int read_write (int source, int sink) {
-  char buffer[bsize];
-  ssize_t n;
-
-  bzero(buffer, bsize);
   n = read(source, buffer, bsize);
   if (n < 0) {
     perror("error while reading from socket");
