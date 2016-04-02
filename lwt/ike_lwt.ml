@@ -21,7 +21,7 @@ open Result
 let pfkey_reader socket () =
   let buf = Bytes.create 8192 in
   Lwt_unix.read socket buf 0 8192 >|= fun n ->
-  Some (`Pfkey (Cstruct.of_string (Bytes.sub buf 0 n)))
+  Some (`Pfkey (Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 n))))
 (*
 let rec user_socket push socket () =
   Lwt_unix.read socket >>= fun data ->

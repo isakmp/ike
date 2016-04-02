@@ -12,7 +12,7 @@ BUILDDIR=${BUILDDIR:="_build"}
 action ()
 {
     case $1 in
-        default) action lwt ; action heler ;;
+        default) action lwt ; action helper ;;
         helper) cc -Wall -Werror -O3 -o helper/pf_to_tcp helper/pf_to_tcp.c ;;
         lwt) action pfkey ; $OCAMLBUILD lwt/ike_lwt.native ;;
         pfkey) $OCAMLBUILD ike.cmx ike.cmxa ;;
