@@ -7,16 +7,6 @@ author:       ["a"]
 maintainer:   ["a"]
 license:      "BSD2"
 
-build: [
-  ["ocaml" "pkg/build.ml" "native=%{ocaml-native}%"
-                          "native-dynlink=%{ocaml-native-dynlink}%"]
-]
-build-test: [
-  ["ocaml" "pkg/build.ml" "native=%{ocaml-native}%"
-                          "native-dynlink=%{ocaml-native-dynlink}%"]
-  ["sh" "-exc" "if test -f ./feedback.native; then ./feedback.native; else ./feedback.byte; fi"]
-]
-
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
