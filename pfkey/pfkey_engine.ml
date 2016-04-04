@@ -15,30 +15,29 @@ type state = {
   sequence : int32 ;
 }
 
-let create () = {
-  pid = 42l ;
+let create ?(pid = 42l) () = {
+  pid ;
   sequence = 0l ;
   logger = Logs.Src.create "pfkey engine" ;
 }
 
-let handle_data state hdr exts =
-  let open Pfkey_wire in
-  Logs.debug ~src:state.logger
+let decode s buf =
+  Decode.header buf >>= fun (payload, hdr) ->
+  (* validate that sequence is good (either a reply to our request, or a new message from the kernel [or pid X]) *)
+  Decode.separate_extensions payload >>= fun exts ->
+  mapM (Decode.extension s.logger) exts >>= fun exts ->
+  Logs.debug ~src:s.logger
     (fun pp -> pp "handling message %s with %d extensions: %s"
         (Sexplib.Sexp.to_string_hum (sexp_of_header hdr))
         (List.length exts)
         (String.concat ", "
            (List.map Sexplib.Sexp.to_string_hum
               (List.map sexp_of_extension exts)))) ;
+  (* handle unsolicited requests and responses which are not in serial number *)
+  let open Pfkey_wire in
   match hdr.typ with
-  | REGISTER -> return (state, "bla")
+  | REGISTER -> return (s, "bla")
   | _ -> assert false
-
-let decode s buf =
-  Decode.header buf >>= fun (payload, hdr) ->
-  Decode.separate_extensions payload >>= fun exts ->
-  mapM (Decode.extension s.logger) exts >>= fun exts ->
-  handle_data s hdr exts
 
 let encode s cmd =
   let open Pfkey_wire in

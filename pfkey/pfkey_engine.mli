@@ -9,7 +9,7 @@ type cmd_from_kern = string
 
 type state
 
-val create : unit -> state
+val create : ?pid:int32 -> unit -> state
 
 val decode : state -> Cstruct.t -> (state * cmd_from_kern, C.error) result
 
