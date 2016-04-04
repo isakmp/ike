@@ -5,6 +5,7 @@ type state = int
 type t = {
   ts : state list ;
   pfkey : Pfkey_engine.state ;
+  logger : Logs.src ;
 (*  config : Config.t ;
   supported_auth : ?? ; (* from the kernel *)
     supported_enc : ?? ; *)
@@ -52,16 +53,27 @@ let handle_control t = function
 *)
 
 let handle t ev =
+  Logs.info ~src:t.logger (fun pp -> pp "handling..") ;
   match ev with
-  | `Pfkey data -> Pfkey_engine.handle t.pfkey data >|= fun (pfkey, pfkeys) ->
-    ({ t with pfkey }, `Pfkey [pfkeys], `Data [])
+  | `Pfkey data ->
+    Pfkey_engine.decode t.pfkey data >|= fun (pfkey, out) ->
+    Logs.info ~src:t.logger (fun pp -> pp "handled pfkeys, out %s" out) ;
+    ({ t with pfkey }, `Pfkey [], `Data [])
   | _ -> assert false
 (* | `Control data > Control.decode data >>= handle_control t
    | `Data (data, addr) -> handle_data t data addr
    | `Timer -> handle_tick t *)
 
 let create () =
-(*  let config = Config.parse config in
-    let pfs = [ `Sadb_flush ; `Sadb_register `AH ; `Sadb_register `ESP ] in *)
+  (*  let config = Config.parse config in *)
+  let pfs = [ (* `Flush ; `Register Pfkey_wire.AH ;*) `Register Pfkey_wire.ESP ] in
   let pfkey = Pfkey_engine.create () in
-  ({ ts = [] ; pfkey }, []) (*List.map Pfkey.encode pfs)*)
+  let pfkey, outs =
+    List.fold_left (fun (s, cs) msg ->
+        let s', out = Pfkey_engine.encode s msg in
+        s', out :: cs)
+      (pfkey, [])
+      pfs
+  in
+  ({ ts = [] ; pfkey ; logger = Logs.Src.create "dispatcher" },
+   List.rev outs)
