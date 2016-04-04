@@ -58,7 +58,7 @@ let handle t ev =
   | `Pfkey data ->
     Pfkey_engine.decode t.pfkey data >|= fun (pfkey, out) ->
     Logs.info ~src:t.logger (fun pp -> pp "handled pfkeys, out %s" out) ;
-    ({ t with pfkey }, `Pfkey [], `Data [])
+    ({ t with pfkey }, `Pfkey None, `Data [])
   | _ -> assert false
 (* | `Control data > Control.decode data >>= handle_control t
    | `Data (data, addr) -> handle_data t data addr
@@ -66,14 +66,7 @@ let handle t ev =
 
 let create () =
   (*  let config = Config.parse config in *)
-  let pfs = [ (* `Flush ; `Register Pfkey_wire.AH ;*) `Register Pfkey_wire.ESP ] in
   let pfkey = Pfkey_engine.create () in
-  let pfkey, outs =
-    List.fold_left (fun (s, cs) msg ->
-        let s', out = Pfkey_engine.encode s msg in
-        s', out :: cs)
-      (pfkey, [])
-      pfs
-  in
-  ({ ts = [] ; pfkey ; logger = Logs.Src.create "dispatcher" },
-   List.rev outs)
+  (* should likely be a flush first; and do AH/ESP registration later (depending on configuration) *)
+  let pfkey, out = Pfkey_engine.encode pfkey (`Register Pfkey_wire.ESP) in
+  ({ ts = [] ; pfkey ; logger = Logs.Src.create "dispatcher" }, out)

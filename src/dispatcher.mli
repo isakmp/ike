@@ -6,10 +6,10 @@ type t
    entry point for a side-effecting speaker. *)
 val handle : t ->
   [ `Pfkey of Cstruct.t | `Control of Cstruct.t | `Data of (Cstruct.t * (Unix.inet_addr * int)) | `Tick ] ->
-  (t * [ `Pfkey of Cstruct.t list ] * [ `Data of (Cstruct.t * (Unix.inet_addr * int)) list ],
+  (t * [ `Pfkey of Cstruct.t option ] * [ `Data of (Cstruct.t * (Unix.inet_addr * int)) list ],
    C.error ) Result.result
 
 (* creation of a `t`: it will start with an empty list of Engine.t, and emit
-   some messages to be send to the pfkey socket (FLUSH, REGISTER AH, REGISTER
-   ESP).  It waits for `Config directives which initially add policies *)
-val create : unit -> (t * Cstruct.t list)
+   a message to be send to the pfkey socket (REGISTER ESP).  It waits for
+   `Config directives which initially add policies *)
+val create : unit -> (t * Cstruct.t)
