@@ -1,13 +1,16 @@
 open Result
 
-type pfkey_message = [
+type cmd_to_kern = [
+  | `Flush
   | `Register of Pfkey_wire.satype
 ]
+
+type cmd_from_kern = string
 
 type state
 
 val create : unit -> state
 
-val handle : state -> Cstruct.t -> (state * Cstruct.t, C.error) result
+val decode : state -> Cstruct.t -> (state * cmd_from_kern, C.error) result
 
-val send : state -> pfkey_message -> (state * Cstruct.t)
+val encode : state -> cmd_to_kern -> (state * Cstruct.t)

@@ -1,35 +1,56 @@
 open C
 
-type pfkey_message = [
+open Pfkey_coding
+
+type cmd_to_kern = [
+  | `Flush
   | `Register of Pfkey_wire.satype
 ]
 
+type cmd_from_kern = string
+
 type state = {
-  spds : spd list ;
-  sas : sa list ;
   logger : Logs.src ;
+  pid : int32 ;
+  sequence : int32 ;
 }
 
 let create () = {
-  spds = [] ;
-  sas = [] ;
-  logger = Logs.Src.create "pfkey engine"
+  pid = 42l ;
+  sequence = 0l ;
+  logger = Logs.Src.create "pfkey engine" ;
 }
 
-let handle_data state (msg_type, errno, sa_type, seq, pid) payload =
+let handle_data state hdr exts =
   let open Pfkey_wire in
   Logs.debug ~src:state.logger
-    (fun pp -> pp "handling message %s: errno %d sa_type %s seq %08lX pid %lu"
-        (message_type_to_string msg_type) errno (satype_to_string sa_type) seq pid) ;
-  return (state, payload)
+    (fun pp -> pp "handling message %s with %d extensions: %s"
+        (Sexplib.Sexp.to_string_hum (sexp_of_header hdr))
+        (List.length exts)
+        (String.concat ", "
+           (List.map Sexplib.Sexp.to_string_hum
+              (List.map sexp_of_extension exts)))) ;
+  match hdr.typ with
+  | REGISTER -> return (state, "bla")
+  | _ -> assert false
 
-let handle state buf =
-  let open Pfkey_coding in
-  match decode_message buf with
-  | Ok (payload, data) ->
-    handle_data state data payload
-  | Error (Unknown x) -> fail (Failed ("unknown " ^ x))
-  | Error Underflow -> fail (Failed "underflow")
+let decode s buf =
+  Decode.header buf >>= fun (payload, hdr) ->
+  Decode.separate_extensions payload >>= fun exts ->
+  mapM (Decode.extension s.logger) exts >>= fun exts ->
+  handle_data s hdr exts
 
-let send _state _msg =
-  assert false
+let encode s cmd =
+  let open Pfkey_wire in
+  let null = Cstruct.create 0 in
+  let typ, errno, satyp, payload = match cmd with
+    | `Flush -> (FLUSH, 0, UNSPEC, null)
+    | `Register satype -> (REGISTER, 0, satype, null)
+  and seq = s.sequence
+  and pid = s.pid
+  in
+  let hdr = { Pfkey_coding.typ ; errno ; satyp ; seq ; pid } in
+  let cs = Pfkey_coding.Encode.header hdr payload in
+  Logs.debug ~src:s.logger
+    (fun pp -> pp "encoded message %s" (Sexplib.Sexp.to_string_hum (Pfkey_coding.sexp_of_header hdr))) ;
+  ({ s with sequence = Int32.succ seq }, cs)
