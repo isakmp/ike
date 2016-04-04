@@ -13,9 +13,7 @@
 
 #ifdef __linux__
 #include <linux/pfkeyv2.h>
-#endif
-
-#ifdef __FreeBSD__
+#else
 #include <net/pfkeyv2.h>
 #endif
 
@@ -25,6 +23,8 @@
 char buffer[bsize];
 ssize_t n;
 
+#define DEBUG 0
+
 int read_write (int source, int sink) {
   n = read(source, buffer, bsize);
   if (n < 0) {
@@ -32,11 +32,13 @@ int read_write (int source, int sink) {
     return -1;
   }
 
+#if DEBUG
   printf("read/write (%d->%d) ", source, sink);
   for (int i = 0; i < n; i++) {
     printf("%02X ", buffer[i]);
   }
   printf("\n");
+#endif
 
   if (write(sink, buffer, n) != n) {
     perror("error while writing to sink\n");
