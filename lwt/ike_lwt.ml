@@ -18,10 +18,22 @@ communication channels:
 open Lwt.Infix
 open Result
 
+(* this reader needs the logic to read a single complete pfkey message!
+     bytes 5 and 6 (in little endian) encode the length of the message in 64bit words *)
 let pfkey_reader socket () =
   let buf = Bytes.create 8192 in
   Lwt_unix.read socket buf 0 8192 >|= fun n ->
-  Some (`Pfkey (Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 n))))
+  let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 n)) in
+  Some (`Pfkey cs)
+
+let pfkey_send socket msg =
+  Lwt_unix.write socket (Bytes.of_string (Cstruct.to_string msg)) 0 (Cstruct.len msg) >>= fun n ->
+  (* should be a fail *)
+  if n = Cstruct.len msg then
+    Lwt.return_unit
+  else
+    Lwt.fail_with "failed to write to pfkey socket"
+
 (*
 let rec user_socket push socket () =
   Lwt_unix.read socket >>= fun data ->
@@ -38,6 +50,8 @@ let rec tick push () =
   Lwt_unix.sleep 0.5 >>= fun () ->
   tick push ()
 *)
+
+
 let service _user _port pfkey_port _config =
   Lwt.async_exception_hook :=
     (* error handling of a failed network send:
@@ -46,7 +60,7 @@ let service _user _port pfkey_port _config =
         - what should happen when pfkey socket fails?
         - what if control socket fails?
         - log error (done ;) *)
-    (fun exn -> Logs.err (fun p -> p "async exception %s" (Printexc.to_string exn))) ;
+    (fun exn -> Logs.err (fun pp -> pp "async exception %s" (Printexc.to_string exn))) ;
   let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
   Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", pfkey_port))) >>= fun () ->
   let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_fd) in
@@ -67,11 +81,11 @@ let service _user _port pfkey_port _config =
         Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () -> *)
       go t'
     | Error (Ike.C.Failed str) ->
-      Logs_lwt.err
-        (fun p -> p "failed (with %s) while executing, goodbye" str)
+      Logs.err (fun pp -> pp "failed (with %s) while executing, goodbye" str) ;
+      Lwt.return_unit
   in
-  let t, _pfkeys = Ike.Dispatcher.create (*config*) () in
-  (*  Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () -> *)
+  let t, pfkey = Ike.Dispatcher.create (*config*) () in
+  pfkey_send pfkey_fd pfkey >>= fun () ->
   go t
 
 (* copied from logs library test/test_lwt.ml *)
