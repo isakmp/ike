@@ -20,13 +20,15 @@ open Result
 
 (* this reader needs the logic to read a single complete pfkey message!
      bytes 5 and 6 (in little endian) encode the length of the message in 64bit words *)
-let pfkey_reader socket () =
+let pfkey_reader src socket () =
   let buf = Bytes.create 8192 in
   Lwt_unix.read socket buf 0 8192 >|= fun n ->
   let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 n)) in
+  Logs.debug ~src (fun pp -> pp "reading %a" Ike.Utils.pp_cs cs) ;
   Some (`Pfkey cs)
 
-let pfkey_send socket msg =
+let pfkey_send src socket msg =
+  Logs.debug ~src (fun pp -> pp "writing %a" Ike.Utils.pp_cs msg) ;
   Lwt_unix.write socket (Bytes.of_string (Cstruct.to_string msg)) 0 (Cstruct.len msg) >>= fun n ->
   (* should be a fail *)
   if n = Cstruct.len msg then
@@ -61,14 +63,14 @@ let service _user _port pfkey_port _config =
         - what if control socket fails?
         - log error (done ;) *)
     (fun exn -> Logs.err (fun pp -> pp "async exception %s" (Printexc.to_string exn))) ;
+
+  let pfkey_src = Logs.Src.create "lwt_pfkey" in
   let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
   Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", pfkey_port))) >>= fun () ->
-  let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_fd) in
-
-
+  let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_src pfkey_fd) in
   let maybe_send_pf = function
     | None -> Lwt.return_unit
-    | Some pfkey -> pfkey_send pfkey_fd pfkey
+    | Some pfkey -> pfkey_send pfkey_src pfkey_fd pfkey
   in
 
   (* Lwt_unix.(socket PF_INET SOCK_STREAM user) >>= fun user ->
