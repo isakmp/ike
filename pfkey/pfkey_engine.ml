@@ -23,7 +23,7 @@ let encode s cmd =
   let null = Cstruct.create 0 in
   let typ, errno, satyp, payload = match cmd with
     | `Flush -> (FLUSH, 0, UNSPEC, null)
-    | `SPD_Flush -> (SPDFLUSH, 0, UNSPEC, null)
+    | `Policy_Flush -> (SPDFLUSH, 0, UNSPEC, null)
     | `Register satype -> (REGISTER, 0, sa_to_satype satype, null)
   and seq = s.sequence
   and pid = s.pid
@@ -123,5 +123,5 @@ let handle s buf =
   match hdr.typ with
   | REGISTER -> handle_register exts >|= fun supported -> (s, Some supported)
   | FLUSH -> return (s, Some `Flush)
-  | SPDFLUSH -> return (s, Some `SPD_Flush)
+  | SPDFLUSH -> return (s, Some `Policy_Flush)
   | _ -> assert false

@@ -23,13 +23,13 @@ type enc_alg = [
 type pfkey_to_kern = [
   | `Flush
   | `Register of satype
-  | `SPD_Flush
+  | `Policy_Flush
 ] [@@deriving sexp]
 
 type pfkey_from_kern = [
   | `Flush
   | `Supported of auth_alg list * (enc_alg * int * int * int) list
-  | `SPD_Flush
+  | `Policy_Flush
 ] [@@deriving sexp]
 
 type error =
