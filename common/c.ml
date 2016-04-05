@@ -1,23 +1,36 @@
 
 (* high level types used all over, bottom of dependency *)
+open Sexplib.Conv
 
-type version =
-  | IKE_V2
+type satype = [
+  | `AH
+  | `ESP
+] [@@deriving sexp]
 
-type message =
-  | Authentication(* of authentication *)
-  | Certificate (* of certificate list *)
-  | CertificateRequest (* of ??*)
-  | Configuration
-  | Delete
+type auth_alg = [
+  | `SHA256 (* likely hmac *)
+  | `SHA384 (* likely hmac *)
+  | `SHA512 (* likely hmac *)
+] [@@deriving sexp]
 
-type spd = { (* our policy type -- maybe directly in ike? *)
-  idx : int
-}
+type enc_alg = [
+  | `DES (* this is 3des *)
+  | `AES_CBC
+  | `AES_CTR
+  | `AES_GCM16 (* pls read https://eprint.iacr.org/2015/477 if you want shorter tags *)
+] [@@deriving sexp]
 
-type sa = { (* our sa type -- maybe directly in ike? *)
-  spi : int32 ;
-}
+type pfkey_to_kern = [
+  | `Flush
+  | `Register of satype
+  | `SPD_Flush
+] [@@deriving sexp]
+
+type pfkey_from_kern = [
+  | `Flush
+  | `Supported of auth_alg list * (enc_alg * int * int * int) list
+  | `SPD_Flush
+] [@@deriving sexp]
 
 type error =
   | Failed of string

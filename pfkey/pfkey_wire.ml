@@ -342,7 +342,7 @@ type ealg =
   | EALG_BLOWFISHCBC     [@id 7]
   | EALG_NULL            [@id 11]
   (*  | EALG_RIJNDAELCBC     [@id 12] *)
-  | EALG_AES             [@id 12]
+  | EALG_AESCBC          [@id 12]
   | EALG_AESCTR          [@id 13]
   | EALG_AESGCM8         [@id 18] (* RFC4106 *)
   | EALG_AESGCM12        [@id 19]

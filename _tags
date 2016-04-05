@@ -9,7 +9,7 @@ true : warn(+A-4-6-7-9-40-42-44-48)
 <pfkey/pfkey_coding.{ml,mli}>: package(sexplib), package(ppx_sexp_conv), for-pack(Ike)
 <pfkey/pfkey_engine.{ml,mli}>: for-pack(Ike)
 
-<common/c.{ml,mli}>: for-pack(Ike)
+<common/c.{ml,mli}>: package(sexplib), package(ppx_sexp_conv), for-pack(Ike)
 <common/monad.{ml,mli}>: for-pack(Ike)
 <common/utils.{ml,mli}>: for-pack(Ike)
 
