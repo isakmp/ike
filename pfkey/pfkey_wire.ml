@@ -413,3 +413,67 @@ let soft_lifetime_rate = 80
 #define	PFKEY_UNUNIT64(a)	((a) << 3)
 #define	PFKEY_UNIT64(a)		((a) >> 3)
 *)
+
+(* from netipsec/ipsec.h *)
+(* mode of security protocol *)
+(* NOTE: DON'T use IPSEC_MODE_ANY at SPD.  It's only use in SAD *)
+[%%cenum
+type mode =
+  | MODE_ANY       [@id 0] (* i.e. wildcard. *)
+  | MODE_TRANSPORT [@id 1]
+  | MODE_TUNNEL    [@id 2]
+  | MODE_TCPMD5    [@id 3] (* TCP MD5 mode *)
+  [@@uint8_t] [@@sexp]]
+
+(*
+ * Direction of security policy.
+ * NOTE: Since INVALID is used just as flag.
+ * The other are used for loop counter too.
+ *)
+[%%cenum
+type direction =
+  | DIR_ANY      [@id 0]
+  | DIR_INBOUND  [@id 1]
+  | DIR_OUTBOUND [@id 2]
+  | DIR_MAX      [@id 3]
+  | DIR_INVALID  [@id 4]
+  [@@uint8_t] [@@sexp]]
+
+(* Policy level *)
+(*
+ * IPSEC, ENTRUST and BYPASS are allowed for setsockopt() in PCB,
+ * DISCARD, IPSEC and NONE are allowed for setkey() in SPD.
+ * DISCARD and NONE are allowed for system default.
+ *)
+[%%cenum
+type policy_type =
+  | POLICY_DISCARD  [@id 0] (* discarding packet *)
+  | POLICY_NONE     [@id 1] (* through IPsec engine *)
+  | POLICY_IPSEC    [@id 2] (* do IPsec *)
+  | POLICY_ENTRUST  [@id 3] (* consulting SPD if present. *)
+  | POLICY_BYPASS   [@id 4] (* only for privileged socket. *)
+  [@@uint16_t] [@@sexp]]
+
+(* Security protocol level *)
+[%%cenum
+type level =
+  | LEVEL_DEFAULT  [@id 0] (* reference to system default *)
+  | LEVEL_USE      [@id 1] (* use SA if present. *)
+  | LEVEL_REQUIRE  [@id 2] (* require SA. *)
+  | LEVEL_UNIQUE   [@id 3] (* unique SA. *)
+  [@@uint8_t] [@@sexp]]
+
+(*
+#define IPSEC_MANUAL_REQID_MAX	0x3fff
+				/*
+				 * if security policy level == unique, this id
+				 * indicate to a relative SA for use, else is
+				 * zero.
+				 * 1 - 0x3fff are reserved for manual keying.
+				 * 0 are reserved for above reason.  Others is
+				 * for kernel use.
+				 * Note that this id doesn't identify SA
+				 * by only itself.
+				 */
+#define IPSEC_REPLAYWSIZE  32
+*)
