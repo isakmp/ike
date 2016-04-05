@@ -56,13 +56,15 @@ let handle t ev =
   Logs.info ~src:t.logger (fun pp -> pp "handling..") ;
   match ev with
   | `Pfkey data ->
-    Pfkey_engine.decode t.pfkey data >|= fun (pfkey, cmd) ->
+    Pfkey_engine.handle t.pfkey data >|= fun (pfkey, cmd) ->
     let cmdstr = match cmd with
       | None -> "none"
       | Some x -> Sexplib.Sexp.to_string_hum (sexp_of_pfkey_from_kern x)
     in
     Logs.info ~src:t.logger (fun pp -> pp "handled pfkeys: %s" cmdstr) ;
-    ({ t with pfkey }, `Pfkey None, `Data [])
+    let pfkey, out = Pfkey_engine.maybe_command pfkey in
+    Logs.debug ~src:t.logger (fun pp -> pp "sending out %d" (match out with None -> 0 | Some x -> Cstruct.len x)) ;
+    ({ t with pfkey }, `Pfkey out, `Data [])
   | _ -> assert false
 (* | `Control data > Control.decode data >>= handle_control t
    | `Data (data, addr) -> handle_data t data addr
@@ -70,7 +72,5 @@ let handle t ev =
 
 let create () =
   (*  let config = Config.parse config in *)
-  let pfkey = Pfkey_engine.create () in
-  (* should likely be a flush first; and do AH/ESP registration later (depending on configuration) *)
-  let pfkey, out = Pfkey_engine.encode pfkey (`Register `ESP) in
+  let pfkey, out = Pfkey_engine.create ~commands:[`Flush ; `Register `AH ; `Register `ESP] () in
   ({ ts = [] ; pfkey ; logger = Logs.Src.create "dispatcher" }, out)

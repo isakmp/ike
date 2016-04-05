@@ -62,6 +62,9 @@ int main (int argc, char* argv[]) {
     port = atoi(argv[1]);
   }
 
+#if DEBUG
+  printf("starting with debug enabled\n");
+#endif
   pf_s = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
   if (pf_s < 0) {
     perror("error while creating PF_KEY socket");

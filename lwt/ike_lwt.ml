@@ -66,6 +66,11 @@ let service _user _port pfkey_port _config =
   let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_fd) in
 
 
+  let maybe_send_pf = function
+    | None -> Lwt.return_unit
+    | Some pfkey -> pfkey_send pfkey_fd pfkey
+  in
+
   (* Lwt_unix.(socket PF_INET SOCK_STREAM user) >>= fun user ->
      Lwt_unix.(socket PF_INET SOCK_DGRAM port) >>= fun network -> *)
   (* need to bind / connect *)
@@ -76,16 +81,16 @@ let service _user _port pfkey_port _config =
   let rec go t =
     Lwt_stream.next pfkey_stream >>= fun ev ->
     match Ike.Dispatcher.handle t ev with
-    | Ok (t', `Pfkey _pfkeys, `Data _nouts) ->
-(*      Lwt_list.iter_s (Lwt_unix.sendto network) nouts >>= fun () ->
-        Lwt_list.iter_s (Lwt_unix.send pfkey) pfkeys >>= fun () -> *)
+    | Ok (t', `Pfkey pfkey, `Data _nouts) ->
+      maybe_send_pf pfkey >>= fun () ->
+(*      Lwt_list.iter_s (Lwt_unix.sendto network) nouts >>= fun () -> *)
       go t'
     | Error (Ike.C.Failed str) ->
       Logs.err (fun pp -> pp "failed (with %s) while executing, goodbye" str) ;
       Lwt.return_unit
   in
   let t, pfkey = Ike.Dispatcher.create (*config*) () in
-  pfkey_send pfkey_fd pfkey >>= fun () ->
+  maybe_send_pf pfkey >>= fun () ->
   go t
 
 (* copied from logs library test/test_lwt.ml *)

@@ -2,8 +2,11 @@ open Result
 
 type state
 
-val create : ?pid:int32 -> unit -> state
+val create : ?pid:int32 -> ?commands:C.pfkey_to_kern list -> unit -> state * Cstruct.t option
 
-val decode : state -> Cstruct.t -> (state * C.pfkey_from_kern option, C.error) result
+val enqueue : state -> C.pfkey_to_kern -> state
 
-val encode : state -> C.pfkey_to_kern -> (state * Cstruct.t)
+val maybe_command : state -> state * Cstruct.t option
+
+val handle : state -> Cstruct.t -> (state * C.pfkey_from_kern option, C.error) result
+

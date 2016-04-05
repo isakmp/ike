@@ -7,9 +7,9 @@ type t
 val handle : t ->
   [ `Pfkey of Cstruct.t | `Control of Cstruct.t | `Data of (Cstruct.t * (Unix.inet_addr * int)) | `Tick ] ->
   (t * [ `Pfkey of Cstruct.t option ] * [ `Data of (Cstruct.t * (Unix.inet_addr * int)) list ],
-   C.error ) Result.result
+   C.error) Result.result
 
 (* creation of a `t`: it will start with an empty list of Engine.t, and emit
    a message to be send to the pfkey socket (REGISTER ESP).  It waits for
    `Config directives which initially add policies *)
-val create : unit -> (t * Cstruct.t)
+val create : unit -> t * Cstruct.t option

@@ -2,17 +2,58 @@ open C
 
 open Pfkey_coding
 
+type ready_or_not = Waiting | Ready
+
 type state = {
+  machina : ready_or_not ;
   logger : Logs.src ;
   pid : int32 ;
   sequence : int32 ;
+  commands : pfkey_to_kern list
 }
 
-let create ?(pid = 42l) () = {
-  pid ;
-  sequence = 0l ;
-  logger = Logs.Src.create "pfkey engine" ;
-}
+let sa_to_satype =
+  let open Pfkey_wire in
+  function
+  | `ESP -> ESP
+  | `AH -> AH
+
+let encode s cmd =
+  let open Pfkey_wire in
+  let null = Cstruct.create 0 in
+  let typ, errno, satyp, payload = match cmd with
+    | `Flush -> (FLUSH, 0, UNSPEC, null)
+    | `SPD_Flush -> (SPDFLUSH, 0, UNSPEC, null)
+    | `Register satype -> (REGISTER, 0, sa_to_satype satype, null)
+  and seq = s.sequence
+  and pid = s.pid
+  in
+  let hdr = { Pfkey_coding.typ ; errno ; satyp ; seq ; pid } in
+  let cs = Pfkey_coding.Encode.header hdr payload in
+  Logs.debug ~src:s.logger
+    (fun pp -> pp "encoded message %s" (Sexplib.Sexp.to_string_hum (Pfkey_coding.sexp_of_header hdr))) ;
+  ({ s with sequence = Int32.succ seq }, cs)
+
+let maybe_command s =
+  match s.machina, s.commands with
+  | Ready, c::commands ->
+    let s, cs = encode s c in
+    ({ s with machina = Waiting ; commands }, Some cs)
+  | Ready, [] -> (s, None)
+  | Waiting, commands -> ({ s with commands }, None)
+
+let enqueue s cmd = { s with commands = s.commands @ [cmd] }
+
+let create ?(pid = 42l) ?(commands = []) () =
+  let s = {
+    pid ;
+    sequence = 0l ;
+    logger = Logs.Src.create "pfkey engine" ;
+    commands ;
+    machina = Ready
+  }
+  in
+  maybe_command s
 
 let aalg_to_auth =
   let open Pfkey_wire in
@@ -50,12 +91,15 @@ let handle_register exts =
     ([], [])
     exts
   in
-  `Supported (a, e)
+  if List.length a = 0 && List.length e = 0 then
+    fail (Failed "no supported algorithms")
+(*  else if List.exists (function Supported _ -> true | _ -> false) exts then
+    fail (Failed "invalid register message") *)
+  else
+    return (`Supported (a, e))
 
-
-let decode s buf =
+let handle s buf =
   Decode.header buf >>= fun (payload, hdr) ->
-  (* validate that sequence is good (either a reply to our request, or a new message from the kernel [or pid X]) *)
   Decode.separate_extensions payload >>= fun exts ->
   mapM (Decode.extension s.logger) exts >>= fun exts ->
   Logs.debug ~src:s.logger
@@ -65,38 +109,19 @@ let decode s buf =
         (String.concat ", "
            (List.map Sexplib.Sexp.to_string_hum
               (List.map sexp_of_extension exts)))) ;
-  (* handle unsolicited requests and responses which are not in serial number *)
+
+  let s =
+    if hdr.seq = Int32.pred s.sequence && hdr.pid = s.pid then
+      (* this was the outstanding reply *)
+      { s with machina = Ready }
+    else
+      (* handle unsolicited requests and responses which are not in serial number *)
+      (* drop? *)
+      s
+  in
   let open Pfkey_wire in
   match hdr.typ with
-  | REGISTER -> return (s, Some (handle_register exts))
+  | REGISTER -> handle_register exts >|= fun supported -> (s, Some supported)
   | FLUSH -> return (s, Some `Flush)
   | SPDFLUSH -> return (s, Some `SPD_Flush)
   | _ -> assert false
-
-let sa_to_satype =
-  let open Pfkey_wire in
-  function
-  | `ESP -> ESP
-  | `AH -> AH
-
-(*
-let satype_to_sa = function
-  | Pfkey_wire.ESP -> `ESP
-  | Pfkey_wire.AH -> `AH
-*)
-
-let encode s cmd =
-  let open Pfkey_wire in
-  let null = Cstruct.create 0 in
-  let typ, errno, satyp, payload = match cmd with
-    | `Flush -> (FLUSH, 0, UNSPEC, null)
-    | `SPD_Flush -> (SPDFLUSH, 0, UNSPEC, null)
-    | `Register satype -> (REGISTER, 0, sa_to_satype satype, null)
-  and seq = s.sequence
-  and pid = s.pid
-  in
-  let hdr = { Pfkey_coding.typ ; errno ; satyp ; seq ; pid } in
-  let cs = Pfkey_coding.Encode.header hdr payload in
-  Logs.debug ~src:s.logger
-    (fun pp -> pp "encoded message %s" (Sexplib.Sexp.to_string_hum (Pfkey_coding.sexp_of_header hdr))) ;
-  ({ s with sequence = Int32.succ seq }, cs)
