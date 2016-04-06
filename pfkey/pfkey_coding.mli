@@ -14,6 +14,9 @@ type alg =
 
 type extension =
   | Supported of alg list
+  | Policy of Pfkey_wire.policy_type * Pfkey_wire.direction * int32 * int32
+  | Source of int * int * int * Ipaddr.t
+  | Destination of int * int * int * Ipaddr.t
   [@@deriving sexp]
 
 module Decode : sig

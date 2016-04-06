@@ -187,7 +187,7 @@ type sa2 = {
 type policy = {
   len : uint16_t ;
   ext_type : uint16_t ;
-  policy_type : uint16_t ; (* See policy type of ipsec.h *)
+  ptype : uint16_t ; (* See policy type of ipsec.h *)
   direction : uint8_t ;    (* See ipsec.h *)
   reserved : uint8_t ;
   id : uint32_t ;

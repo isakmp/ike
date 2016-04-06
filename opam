@@ -24,6 +24,7 @@ depends: [
   "ipaddr"
   "alcotest" {test}
   "fmt"
+  "ipaddr"
 ]
 
 available: [ ocaml-version >= "4.02.3" ]

@@ -87,14 +87,15 @@ let handle_register exts =
           | Auth _ -> assert false
         in
         (a @ Utils.filter_map aalg_to_auth (List.map f auth),
-         e @ Utils.filter_map ealg_to_enc (List.map g enc)))
+         e @ Utils.filter_map ealg_to_enc (List.map g enc))
+      | _ -> (a, e))
     ([], [])
     exts
   in
   if List.length a = 0 && List.length e = 0 then
     fail (Failed "no supported algorithms")
-(*  else if List.exists (function Supported _ -> true | _ -> false) exts then
-    fail (Failed "invalid register message") *)
+  else if List.exists (function Supported _ -> false | _ -> true) exts then
+    fail (Failed "invalid register message")
   else
     return (`Supported (a, e))
 
@@ -124,4 +125,7 @@ let handle s buf =
   | REGISTER -> handle_register exts >|= fun supported -> (s, Some supported)
   | FLUSH -> return (s, Some `Flush)
   | SPDFLUSH -> return (s, Some `Policy_Flush)
-  | _ -> assert false
+  | x ->
+    Logs.debug ~src:s.logger
+      (fun pp -> pp "not forwarding %s" (Pfkey_wire.message_type_to_string x)) ;
+    return (s, None)

@@ -17,3 +17,4 @@ PKG logs.lwt
 PKG ipaddr
 PKG alcotest
 PKG fmt
+PKG ipaddr
