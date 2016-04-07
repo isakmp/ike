@@ -36,6 +36,31 @@ let pfkey_send src socket msg =
   else
     Lwt.fail_with "failed to write to pfkey socket"
 
+
+let pfkey_socket_fd addr =
+  let buf = " " in
+  let io_vectors = [ Lwt_unix.(io_vector buf 0 1) ] in
+  let pass_fd = Lwt_unix.(socket PF_UNIX SOCK_STREAM 0) in
+  Lwt_unix.(connect pass_fd (ADDR_UNIX addr)) >>= fun () ->
+  Lwt_unix.(recv_msg pass_fd io_vectors) >>= function
+  | (1, [pfkey_fd]) ->
+    Lwt_unix.(close pass_fd) >>= fun () ->
+    Lwt.return (Lwt_unix.of_unix_file_descr pfkey_fd)
+  | ( _ , _ ) ->
+    Lwt_unix.(close pass_fd) >>= fun () ->
+    Lwt.fail_with "failed to aquire pf_key fd"
+
+let pfkey_socket_tcp port =
+  let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
+  Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", port))) >>= fun () ->
+
+  Lwt.return pfkey_fd
+let pfkey_socket = function
+  | (_, addr) when (String.length addr) != 0 ->
+    pfkey_socket_fd addr
+  | (port, _) ->
+    pfkey_socket_tcp port
+
 (*
 let rec user_socket push socket () =
   Lwt_unix.read socket >>= fun data ->
@@ -54,7 +79,7 @@ let rec tick push () =
 *)
 
 
-let service _user _port pfkey_port _config =
+let service _user _port pf_key_cnf _config =
   Lwt.async_exception_hook :=
     (* error handling of a failed network send:
         - inform IKE (find which t is responsible and do a proper shutdown)
@@ -65,8 +90,7 @@ let service _user _port pfkey_port _config =
     (fun exn -> Logs.err (fun pp -> pp "async exception %s" (Printexc.to_string exn))) ;
 
   let pfkey_src = Logs.Src.create "lwt_pfkey" in
-  let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
-  Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", pfkey_port))) >>= fun () ->
+  pfkey_socket pf_key_cnf >>= fun pfkey_fd ->
   let pfkey_stream = Lwt_stream.from (pfkey_reader pfkey_src pfkey_fd) in
   let maybe_send_pf = function
     | None -> Lwt.return_unit
@@ -124,6 +148,7 @@ let pfkey = ref 1234
 let user = ref 23
 let port = ref 500
 let config = ref ""
+let un_addr = ref ""
 let rest = ref []
 
 let usage = "usage " ^ Sys.argv.(0)
@@ -131,6 +156,7 @@ let usage = "usage " ^ Sys.argv.(0)
 let arglist = [
   ("-u", Arg.Int (fun d -> user := d), "port for user config (defaults to 23)") ;
   ("-p", Arg.Int (fun d -> pfkey := d), "port for pfkey (defaults to 1234)") ;
+  ("-A", Arg.String (fun d -> un_addr := d), "UNIX-domain address for pfkey");
   ("-d", Arg.Int (fun d -> port := d), "port for IKE daemon (defaults to 500)") ;
   ("-c", Arg.String (fun d -> config := d), "IKE configuration") ;
 ]
@@ -141,6 +167,6 @@ let _ =
     Fmt_tty.setup_std_outputs ();
     Logs.set_level @@ Some Logs.Debug;
     Logs.set_reporter @@ lwt_reporter ();
-    Lwt_main.run (service !user !port !pfkey !config)
+    Lwt_main.run (service !user !port (!pfkey, !un_addr) !config)
   with
   | Sys_error s -> print_endline s
