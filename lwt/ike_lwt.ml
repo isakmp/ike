@@ -18,13 +18,17 @@ communication channels:
 open Lwt.Infix
 open Result
 
-(* this reader needs the logic to read a single complete pfkey message!
+(* this reader has the logic to read a single complete pfkey message!
      bytes 5 and 6 (in little endian) encode the length of the message in 64bit words *)
 let pfkey_reader src socket () =
-  let buf = Bytes.create 8192 in
-  Lwt_unix.read socket buf 0 8192 >|= fun n ->
-  let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 n)) in
-  Logs.debug ~src (fun pp -> pp "reading %a" Ike.Utils.pp_cs cs) ;
+  let buf = Bytes.create 16 in
+  Lwt_unix.recv socket buf 0 16 [Lwt_unix.MSG_PEEK] >>= fun _n ->
+  let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 16)) in
+  let len = (Cstruct.LE.get_uint16 cs 4) * 8 in
+  let buf = Bytes.create len in
+  Lwt_unix.read socket buf 0 len >|= fun _n ->
+  let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 len)) in
+  Logs.debug ~src (fun pp -> pp "reading %d %a" len Ike.Utils.pp_cs cs) ;
   Some (`Pfkey cs)
 
 let pfkey_send src socket msg =
