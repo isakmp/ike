@@ -72,5 +72,6 @@ let handle t ev =
 
 let create () =
   (*  let config = Config.parse config in *)
-  let pfkey, out = Pfkey_engine.create ~commands:[`Flush ; `Policy_Flush ; `Register `AH ; `Register `ESP] () in
+  let pfkey, out = Pfkey_engine.create
+      ~commands:[`Dump None ; `Flush None ; `Policy_Dump ; `Policy_Flush ; `Register `AH ; `Register `ESP] () in
   ({ ts = [] ; pfkey ; logger = Logs.Src.create "dispatcher" }, out)

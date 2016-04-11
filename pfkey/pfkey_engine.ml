@@ -22,9 +22,15 @@ let encode s cmd =
   let open Pfkey_wire in
   let null = Cstruct.create 0 in
   let typ, errno, satyp, payload = match cmd with
-    | `Flush -> (FLUSH, 0, UNSPEC, null)
-    | `Policy_Flush -> (SPDFLUSH, 0, UNSPEC, null)
     | `Register satype -> (REGISTER, 0, sa_to_satype satype, null)
+    | `Dump satype ->
+      let satype = Utils.option UNSPEC sa_to_satype satype in
+      (DUMP, 0, satype, null)
+    | `Flush satype ->
+      let satype = Utils.option UNSPEC sa_to_satype satype in
+      (FLUSH, 0, satype, null)
+    | `Policy_Dump -> (SPDDUMP, 0, UNSPEC, null)
+    | `Policy_Flush -> (SPDFLUSH, 0, UNSPEC, null)
   and seq = s.sequence
   and pid = s.pid
   in
@@ -99,6 +105,14 @@ let handle_register exts =
   else
     return (`Supported (a, e))
 
+let maybe_sa hdr =
+  let open Pfkey_wire in
+  match hdr.satyp with
+  | UNSPEC -> None
+  | AH -> Some `AH
+  | ESP -> Some `ESP
+  | _ -> invalid_arg "unhandled sa type"
+
 let handle s buf =
   Decode.header buf >>= fun (payload, hdr) ->
   Decode.separate_extensions payload >>= fun exts ->
@@ -120,10 +134,13 @@ let handle s buf =
       (* drop? *)
       s
   in
+  (* need to handle errors here...
+     translate errno to msg (again, platform-specific), unix-errno package *)
+  (* if hdr.errno <> 0 then *)
   let open Pfkey_wire in
   match hdr.typ with
   | REGISTER -> handle_register exts >|= fun supported -> (s, Some supported)
-  | FLUSH -> return (s, Some `Flush)
+  | FLUSH -> return (s, Some (`Flush (maybe_sa hdr)))
   | SPDFLUSH -> return (s, Some `Policy_Flush)
   | x ->
     Logs.debug ~src:s.logger

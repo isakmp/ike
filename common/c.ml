@@ -21,13 +21,15 @@ type enc_alg = [
 ] [@@deriving sexp]
 
 type pfkey_to_kern = [
-  | `Flush
+  | `Flush of satype option
+  | `Dump of satype option
   | `Register of satype
   | `Policy_Flush
+  | `Policy_Dump
 ] [@@deriving sexp]
 
 type pfkey_from_kern = [
-  | `Flush
+  | `Flush of satype option
   | `Supported of auth_alg list * (enc_alg * int * int * int) list
   | `Policy_Flush
 ] [@@deriving sexp]
