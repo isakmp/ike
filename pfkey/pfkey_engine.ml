@@ -41,6 +41,9 @@ let encode s cmd =
   ({ s with sequence = Int32.succ seq }, cs)
 
 let maybe_command s =
+  Logs.debug ~src:s.logger
+    (fun pp -> pp "%d comamnds in queue, state %s" (List.length s.commands)
+        (match s.machina with Waiting -> "waiting" | Ready -> "ready")) ;
   match s.machina, s.commands with
   | Ready, c::commands ->
     let s, cs = encode s c in
@@ -128,6 +131,18 @@ let handle s buf =
   let s =
     if hdr.seq = Int32.pred s.sequence && hdr.pid = s.pid then
       (* this was the outstanding reply *)
+      { s with machina = Ready }
+    else if hdr.seq = 0l && hdr.pid = s.pid && hdr.typ = Pfkey_wire.SPDDUMP then
+      (* FreeBSD-CURRENT replies in interesting ways for SPDDUMP
+         (sys/netipsec/key.c:key_spddump:2398-2451):
+         - sequence set to number of policies
+         - for each policy:
+           - decrese sequence number
+           - send SPDDUMP with single policy
+         --> violating the request <-> response protocol
+         --> violating the mapping of pid|seq from request to response
+         --> XXX: bug to be reported to FreeBSD people?
+         --> thus we're ok with the last SPDDUMP msg (seq=0) to be ready again *)
       { s with machina = Ready }
     else
       (* handle unsolicited requests and responses which are not in serial number *)
