@@ -3,9 +3,6 @@
 
 communication channels:
   - kernel: pfkey(v2) - RFC2367 + KAME changes
-    startup: register AH + ESP
-    update SA, get requested on outgoing packet
-    policies also contained
   - user: file descriptor / socket with config (mainly SP)
   - network: UDP port 500 IKEv2 (* later also 4500 *)
   - timer (for retransmission and keepalive) every 500 ms
@@ -19,7 +16,7 @@ open Lwt.Infix
 open Result
 
 (* this reader has the logic to read a single complete pfkey message!
-     bytes 5 and 6 (in little endian) encode the length of the message in 64bit words *)
+   message length is a 16 bit value, little endian, offset 5, in 64bit words *)
 let pfkey_reader src socket () =
   let buf = Bytes.create 16 in
   Lwt_unix.recv socket buf 0 16 [Lwt_unix.MSG_PEEK] >>= fun _n ->
@@ -28,12 +25,14 @@ let pfkey_reader src socket () =
   let buf = Bytes.create len in
   Lwt_unix.read socket buf 0 len >|= fun _n ->
   let cs = Cstruct.of_string (Bytes.to_string (Bytes.sub buf 0 len)) in
-  Logs.debug ~src (fun pp -> pp "reading %d %a" len Ike.Utils.pp_cs cs) ;
+  Logs.debug ~src (fun pp -> pp "read %d %a" len Ike.Utils.pp_cs cs) ;
   Some (`Pfkey cs)
 
 let pfkey_send src socket msg =
-  Logs.debug ~src (fun pp -> pp "writing %a" Ike.Utils.pp_cs msg) ;
-  Lwt_unix.write socket (Bytes.of_string (Cstruct.to_string msg)) 0 (Cstruct.len msg) >>= fun n ->
+  let len = Cstruct.len msg in
+  Logs.debug ~src (fun pp -> pp "writing %d %a" len Ike.Utils.pp_cs msg) ;
+  let bytes = Bytes.of_string (Cstruct.to_string msg) in
+  Lwt_unix.write socket bytes 0 len >>= fun n ->
   (* should be a fail *)
   if n = Cstruct.len msg then
     Lwt.return_unit
@@ -55,15 +54,15 @@ let pfkey_socket_fd addr =
     Lwt.fail_with "failed to aquire pf_key fd"
 
 let pfkey_socket_tcp port =
-  let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0) in
-  Lwt_unix.(connect pfkey_fd (ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", port))) >>= fun () ->
-
+  let pfkey_fd = Lwt_unix.(socket PF_INET SOCK_STREAM 0)
+  and addr = Lwt_unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", port)
+  in
+  Lwt_unix.connect pfkey_fd addr >>= fun () ->
   Lwt.return pfkey_fd
+
 let pfkey_socket = function
-  | (_, addr) when (String.length addr) != 0 ->
-    pfkey_socket_fd addr
-  | (port, _) ->
-    pfkey_socket_tcp port
+  | (_, addr) when (String.length addr) != 0 -> pfkey_socket_fd addr
+  | (port, _) -> pfkey_socket_tcp port
 
 (*
 let rec user_socket push socket () =
@@ -91,7 +90,8 @@ let service _user _port pf_key_cnf _config =
         - what should happen when pfkey socket fails?
         - what if control socket fails?
         - log error (done ;) *)
-    (fun exn -> Logs.err (fun pp -> pp "async exception %s" (Printexc.to_string exn))) ;
+    (fun exn -> Logs.err (fun pp ->
+         pp "async exception %s" (Printexc.to_string exn))) ;
 
   let pfkey_src = Logs.Src.create "lwt_pfkey" in
   pfkey_socket pf_key_cnf >>= fun pfkey_fd ->
@@ -104,8 +104,8 @@ let service _user _port pf_key_cnf _config =
   (* Lwt_unix.(socket PF_INET SOCK_STREAM user) >>= fun user ->
      Lwt_unix.(socket PF_INET SOCK_DGRAM port) >>= fun network -> *)
   (* need to bind / connect *)
-(*  Lwt.async (pfkey_socket push pfkey) ;
-  Lwt.async (user_socket push user) ;
+  (* drop privileges <here> *)
+(*Lwt.async (user_socket push user) ;
   Lwt.async (network_socket push network) ;
   Lwt.async (tick push) ; *)
   let rec go t =
@@ -133,7 +133,8 @@ let lwt_reporter () =
   let app, app_flush = buf_fmt ~like:Fmt.stdout in
   let dst, dst_flush = buf_fmt ~like:Fmt.stderr in
   let report src level ~over k msgf =
-    let reporter = Logs_fmt.reporter ~prefix:(Some (Logs.Src.name src ^ " ")) ~app ~dst () in
+    let prefix = Some (Logs.Src.name src ^ " ") in
+    let reporter = Logs_fmt.reporter ~prefix ~app ~dst () in
     let k () =
       let write () = match level with
       | Logs.App -> Lwt_io.write Lwt_io.stdout (app_flush ())
@@ -158,11 +159,11 @@ let rest = ref []
 let usage = "usage " ^ Sys.argv.(0)
 
 let arglist = [
-  ("-u", Arg.Int (fun d -> user := d), "port for user config (defaults to 23)") ;
-  ("-p", Arg.Int (fun d -> pfkey := d), "port for pfkey (defaults to 1234)") ;
-  ("-A", Arg.String (fun d -> un_addr := d), "UNIX-domain address for pfkey");
-  ("-d", Arg.Int (fun d -> port := d), "port for IKE daemon (defaults to 500)") ;
-  ("-c", Arg.String (fun d -> config := d), "IKE configuration") ;
+  ("-u", Arg.Int (fun d -> user := d), "user port (defaults to 23)") ;
+  ("-p", Arg.Int (fun d -> pfkey := d), "pfkey port (defaults to 1234)") ;
+  ("-A", Arg.String (fun d -> un_addr := d), "pfkey UNIX-domain address");
+  ("-d", Arg.Int (fun d -> port := d), "IKE daemin port (defaults to 500)") ;
+  ("-c", Arg.String (fun d -> config := d), "IKE configuration file") ;
 ]
 
 let _ =
