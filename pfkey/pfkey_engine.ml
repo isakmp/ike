@@ -145,8 +145,7 @@ let handle s buf =
          --> thus we're ok with the last SPDDUMP msg (seq=0) to be ready again *)
       { s with machina = Ready }
     else
-      (* handle unsolicited requests and responses which are not in serial number *)
-      (* drop? *)
+      (* handle unsolicited messages (such as SPDADD from setkey) *)
       s
   in
   (* need to handle errors here...

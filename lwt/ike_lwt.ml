@@ -74,13 +74,11 @@ let rec network_socket push socket () =
   Lwt_unix.recv_from socket >>= fun (data, addr) ->
   push (`Data (data, addr)) >>= fun () ->
   network_socket push socket ()
-
-let rec tick push () =
-  push `Tick >>= fun () ->
-  Lwt_unix.sleep 0.5 >>= fun () ->
-  tick push ()
 *)
 
+let tick () =
+  Lwt_unix.sleep 5. >|= fun () ->
+  Some `Tick
 
 let service _user _port pf_key_cnf _config =
   Lwt.async_exception_hook :=
@@ -106,10 +104,13 @@ let service _user _port pf_key_cnf _config =
   (* need to bind / connect *)
   (* drop privileges <here> *)
 (*Lwt.async (user_socket push user) ;
-  Lwt.async (network_socket push network) ;
-  Lwt.async (tick push) ; *)
+  Lwt.async (network_socket push network) ; *)
+
+  let timer_stream = Lwt_stream.from tick in
+  (* we might need some fixed choose, https://github.com/ocsigen/lwt/issues/213 (and 214) *)
+  let stream = Lwt_stream.choose [ pfkey_stream ; timer_stream ] in
   let rec go t =
-    Lwt_stream.next pfkey_stream >>= fun ev ->
+    Lwt_stream.next stream >>= fun ev ->
     match Ike.Dispatcher.handle t ev with
     | Ok (t', `Pfkey pfkey, `Data _nouts) ->
       maybe_send_pf pfkey >>= fun () ->

@@ -53,9 +53,9 @@ let handle_control t = function
 *)
 
 let handle t ev =
-  Logs.info ~src:t.logger (fun pp -> pp "handling..") ;
   match ev with
   | `Pfkey data ->
+    Logs.info ~src:t.logger (fun pp -> pp "handling pfkey") ;
     Pfkey_engine.handle t.pfkey data >|= fun (pfkey, cmd) ->
     let cmdstr = match cmd with
       | None -> "none"
@@ -65,10 +65,12 @@ let handle t ev =
     let pfkey, out = Pfkey_engine.maybe_command pfkey in
     Logs.debug ~src:t.logger (fun pp -> pp "sending out %d" (match out with None -> 0 | Some x -> Cstruct.len x)) ;
     ({ t with pfkey }, `Pfkey out, `Data [])
+  | `Tick ->
+    Logs.debug ~src:t.logger (fun pp -> pp "tick") ;
+    Ok (t, `Pfkey None, `Data [])
   | _ -> assert false
 (* | `Control data > Control.decode data >>= handle_control t
-   | `Data (data, addr) -> handle_data t data addr
-   | `Timer -> handle_tick t *)
+   | `Data (data, addr) -> handle_data t data addr *)
 
 let create () =
   (*  let config = Config.parse config in *)
