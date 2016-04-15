@@ -1,15 +1,4 @@
-*.annot
-*.cmo
-*.cma
-*.cmi
-*.a
-*.o
-*.cmx
-*.cmxs
-*.cmxa
 _build
-setup.data
-setup.log
 *byte
 *native
 helper/pf_to_tcp
