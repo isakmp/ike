@@ -5,6 +5,8 @@ S lwt
 
 B _build/**
 
+FLG -safe-string -warn_error +1..49 -w +A-4-6-7-9-40-42-44-48
+
 PKG cstruct
 PKG lwt
 PKG lwt.unix
