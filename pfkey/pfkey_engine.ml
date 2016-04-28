@@ -87,16 +87,14 @@ let ealg_to_enc (id, iv, min, max) =
 let handle_register exts =
   let a, e = List.fold_left (fun (a, e) -> function
       | Supported algs ->
-        let auth, enc = List.partition (function Auth _ -> true | Enc _ -> false) algs
-        and f = function
-          | Auth (id, _, _) -> id
-          | Enc _ -> assert false
-        and g = function
-          | Enc (id, iv, min, max) -> (id, iv, min, max)
-          | Auth _ -> assert false
+        let auth, enc = List.fold_left (fun (a, es) -> function
+            | Auth (id, _, _) -> (id :: a, es)
+            | Enc (id, iv, min, max) -> (a, (id, iv, min, max) :: es))
+            ([], [])
+            algs
         in
-        (a @ Utils.filter_map aalg_to_auth (List.map f auth),
-         e @ Utils.filter_map ealg_to_enc (List.map g enc))
+        (a @ Utils.filter_map aalg_to_auth auth,
+         e @ Utils.filter_map ealg_to_enc enc)
       | _ -> (a, e))
     ([], [])
     exts
@@ -114,7 +112,7 @@ let maybe_sa hdr =
   | UNSPEC -> None
   | AH -> Some `AH
   | ESP -> Some `ESP
-  | _ -> invalid_arg "unhandled sa type"
+  | _ -> None (* XXX: maybe log some error? *)
 
 let handle s buf =
   Decode.header buf >>= fun (payload, hdr) ->
