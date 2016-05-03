@@ -4,5 +4,6 @@ script: bash -ex .travis-opam.sh
 sudo: required
 env:
   - PACKAGE="ike" OCAML_VERSION=4.02
+  - PACKAGE="ike" OCAML_VERSION=4.03
 notifications:
   email: false
