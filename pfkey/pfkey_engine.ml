@@ -7,7 +7,7 @@ type ready_or_not = Waiting | Ready
 type state = {
   machina : ready_or_not ;
   logger : Logs.src ;
-  pid : int32 ;
+  process : int32 ;
   sequence : int32 ;
   commands : pfkey_to_kern list
 }
@@ -32,7 +32,7 @@ let encode s cmd =
     | `Policy_Dump -> (SPDDUMP, 0, UNSPEC, null)
     | `Policy_Flush -> (SPDFLUSH, 0, UNSPEC, null)
   and seq = s.sequence
-  and pid = s.pid
+  and pid = s.process
   in
   let hdr = { Pfkey_coding.typ ; errno ; satyp ; seq ; pid } in
   let cs = Pfkey_coding.Encode.header hdr payload in
@@ -53,9 +53,9 @@ let maybe_command s =
 
 let enqueue s cmd = { s with commands = s.commands @ [cmd] }
 
-let create ?(pid = 42l) ?(commands = []) () =
+let create ?(process = 42l) ?(commands = []) () =
   let s = {
-    pid ;
+    process ;
     sequence = 0l ;
     logger = Logs.Src.create "pfkey engine" ;
     commands ;
@@ -127,10 +127,10 @@ let handle s buf =
               (List.map sexp_of_extension exts)))) ;
 
   let s =
-    if hdr.seq = Int32.pred s.sequence && hdr.pid = s.pid then
+    if hdr.seq = Int32.pred s.sequence && hdr.pid = s.process then
       (* this was the outstanding reply *)
       { s with machina = Ready }
-    else if hdr.seq = 0l && hdr.pid = s.pid && hdr.typ = Pfkey_wire.SPDDUMP then
+    else if hdr.seq = 0l && hdr.pid = s.process && hdr.typ = Pfkey_wire.SPDDUMP then
       (* FreeBSD-CURRENT replies in interesting ways for SPDDUMP
          (sys/netipsec/key.c:key_spddump:2398-2451):
          - sequence set to number of policies

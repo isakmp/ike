@@ -2,7 +2,7 @@ open Result
 
 type state
 
-val create : ?pid:int32 -> ?commands:C.pfkey_to_kern list -> unit -> state * Cstruct.t option
+val create : ?process:int32 -> ?commands:C.pfkey_to_kern list -> unit -> state * Cstruct.t option
 
 val enqueue : state -> C.pfkey_to_kern -> state
 
