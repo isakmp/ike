@@ -1,6 +1,7 @@
-true : annot, bin_annot, safe_string, package(result), package(logs), package(cstruct)
+true : annot, bin_annot, safe_string
 true : warn_error(+1..49)
 true : warn(+A-4-6-44-48)
+true : package(result), package(logs), package(cstruct)
 "pfkey" : include
 "common" : include
 "src" : include
