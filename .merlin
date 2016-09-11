@@ -5,7 +5,7 @@ S lwt
 
 B _build/**
 
-FLG -safe-string -warn_error +1..49 -w +A-4-6-44-48
+FLG -safe-string -warn_error -w +A-4-6-44-48
 
 PKG cstruct
 PKG lwt

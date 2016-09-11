@@ -2,6 +2,11 @@ open C
 
 type state = int
 
+(* XXX: somehow this might be more convenient (works if each module instantiated only once / using a single logger)
+let src = Logs.Src.create "dispatcher" ~doc:"xxx"
+module Log = (val Logs.src_log src : Logs.LOG)
+*)
+
 type t = {
   ts : state list ;
   pfkey : Pfkey_engine.state ;

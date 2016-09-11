@@ -134,8 +134,11 @@ let lwt_reporter () =
   let app, app_flush = buf_fmt ~like:Fmt.stdout in
   let dst, dst_flush = buf_fmt ~like:Fmt.stderr in
   let report src level ~over k msgf =
-    let prefix = Some (Logs.Src.name src ^ " ") in
-    let reporter = Logs_fmt.reporter ~prefix ~app ~dst () in
+    (* we like to print the log source, not the application name! *)
+    let pp_header ppf (lvl, _) =
+      Logs_fmt.pp_header ppf (lvl, Some (Logs.Src.name src))
+    in
+    let reporter = Logs_fmt.reporter ~pp_header ~app ~dst () in
     let k () =
       let write () = match level with
       | Logs.App -> Lwt_io.write Lwt_io.stdout (app_flush ())

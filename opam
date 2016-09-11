@@ -7,7 +7,7 @@ author:       ["a"]
 maintainer:   ["a"]
 license:      "BSD2"
 
-build: [ "sh" "-exc" "build.sh" ]
+build: [ "sh" "-exc" "build" ]
 
 depends: [
   "ocamlfind" {build}
@@ -19,7 +19,7 @@ depends: [
   "sexplib"
   "nocrypto" {>= "0.5.3"}
   "astring"
-  "logs"
+  "logs" {>= "0.6.0"}
   "lwt"
   "ipaddr"
   "fmt"
