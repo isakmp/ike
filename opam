@@ -7,7 +7,7 @@ author:       ["a"]
 maintainer:   ["a"]
 license:      "BSD2"
 
-build: [ "sh" "-exc" "build" ]
+build: [ "./build" ]
 
 depends: [
   "ocamlfind" {build}
@@ -21,7 +21,6 @@ depends: [
   "astring"
   "logs" {>= "0.6.0"}
   "lwt"
-  "ipaddr"
   "fmt"
   "ipaddr"
   "alcotest" {test}
