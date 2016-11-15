@@ -74,7 +74,7 @@ module Decode = struct
 
   let support_enc src buf =
     algs buf >|= fun algs ->
-    Supported (Utils.filter_map (fun (id, iv, min, max) ->
+    Supported (Utils.filter_map ~f:(fun (id, iv, min, max) ->
         match int_to_ealg id with
         | None -> Logs.warn ~src (fun pp -> pp "unkown encryption algorithm %d" id) ; None
         | Some x -> Some (Enc (x, iv, min, max)))

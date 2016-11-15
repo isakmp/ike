@@ -93,8 +93,8 @@ let handle_register exts =
             ([], [])
             algs
         in
-        (a @ Utils.filter_map aalg_to_auth auth,
-         e @ Utils.filter_map ealg_to_enc enc)
+        (a @ Utils.filter_map ~f:aalg_to_auth auth,
+         e @ Utils.filter_map ~f:ealg_to_enc enc)
       | _ -> (a, e))
     ([], [])
     exts

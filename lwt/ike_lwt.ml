@@ -42,15 +42,15 @@ let pfkey_send src socket msg =
 
 let pfkey_socket_fd addr =
   let buf = " " in
-  let io_vectors = [ Lwt_unix.(io_vector buf 0 1) ] in
-  let pass_fd = Lwt_unix.(socket PF_UNIX SOCK_STREAM 0) in
-  Lwt_unix.(connect pass_fd (ADDR_UNIX addr)) >>= fun () ->
-  Lwt_unix.(recv_msg pass_fd io_vectors) >>= function
+  let io_vectors = [ Lwt_unix.io_vector ~buffer:buf ~offset:0 ~length:1 ] in
+  let socket = Lwt_unix.(socket PF_UNIX SOCK_STREAM 0) in
+  Lwt_unix.connect socket (Lwt_unix.ADDR_UNIX addr) >>= fun () ->
+  Lwt_unix.recv_msg ~socket ~io_vectors >>= function
   | (1, [pfkey_fd]) ->
-    Lwt_unix.(close pass_fd) >>= fun () ->
+    Lwt_unix.close socket >>= fun () ->
     Lwt.return (Lwt_unix.of_unix_file_descr pfkey_fd)
   | ( _ , _ ) ->
-    Lwt_unix.(close pass_fd) >>= fun () ->
+    Lwt_unix.close socket >>= fun () ->
     Lwt.fail_with "failed to aquire pf_key fd"
 
 let pfkey_socket_tcp port =
